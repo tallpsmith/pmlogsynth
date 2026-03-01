@@ -1,0 +1,11 @@
+# IDE
+.idea/
+
+# macOS / system
+.DS_Store
+
+# Installer packages
+*.pkg
+
+# Claude local settings (user-specific permissions)
+.claude/settings.local.json

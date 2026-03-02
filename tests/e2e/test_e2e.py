@@ -7,13 +7,13 @@ directory is never empty so CI's pytest run always exits 0 when PCP is present.
 import pytest
 
 
-@pytest.mark.tier3
+@pytest.mark.e2e
 def test_pcp_library_available(pcp_available: bool) -> None:
     """Verify pcp.pmi is importable (fixture skips if not)."""
     assert pcp_available
 
 
-@pytest.mark.tier3
+@pytest.mark.e2e
 def test_pcp_pmi_import(pcp_available: bool) -> None:
     """Verify pcp.pmi has the pmiLogImport class needed by ArchiveWriter."""
     import pcp.pmi as pmi

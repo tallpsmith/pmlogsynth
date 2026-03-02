@@ -18,7 +18,7 @@ BUNDLED_NAMES = {
 }
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_resolve_bundled_generic_small() -> None:
     """Resolve generic-small without -C returns a 2-CPU profile."""
     resolver = ProfileResolver()
@@ -27,7 +27,7 @@ def test_resolve_bundled_generic_small() -> None:
     assert hw.name == "generic-small"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_resolve_all_bundled_profiles() -> None:
     """All 7 bundled profiles resolve without error."""
     resolver = ProfileResolver()
@@ -37,7 +37,7 @@ def test_resolve_all_bundled_profiles() -> None:
         assert hw.cpus > 0
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_resolve_nonexistent_raises_validation_error() -> None:
     """Resolving an unknown profile name raises ValidationError."""
     resolver = ProfileResolver()
@@ -45,7 +45,7 @@ def test_resolve_nonexistent_raises_validation_error() -> None:
         resolver.resolve("nonexistent")
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_all_no_config_dir_has_seven_bundled() -> None:
     """list_all() without -C contains exactly 7 bundled profiles."""
     resolver = ProfileResolver()
@@ -55,7 +55,7 @@ def test_list_all_no_config_dir_has_seven_bundled() -> None:
     assert bundled_names == BUNDLED_NAMES
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_all_with_config_dir_includes_test_profiles() -> None:
     """list_all() with -C includes test fixture profiles labelled 'config-dir'."""
     resolver = ProfileResolver(config_dir=FIXTURES)
@@ -65,7 +65,7 @@ def test_list_all_with_config_dir_includes_test_profiles() -> None:
     assert "test-multi-disk" in config_dir_names
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_config_dir_overrides_bundled() -> None:
     """A config-dir profile with the same name as a bundled one takes precedence."""
     import tempfile
@@ -82,7 +82,7 @@ def test_config_dir_overrides_bundled() -> None:
         assert hw.cpus == 99  # config-dir takes precedence
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_all_source_labels() -> None:
     """All entries from list_all() have valid source labels."""
     resolver = ProfileResolver(config_dir=FIXTURES)
@@ -92,7 +92,7 @@ def test_list_all_source_labels() -> None:
         assert entry.source in valid_sources
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_resolve_test_only_profile_from_config_dir() -> None:
     """Profiles only in -C (not bundled) can be resolved."""
     resolver = ProfileResolver(config_dir=FIXTURES)
@@ -102,7 +102,7 @@ def test_resolve_test_only_profile_from_config_dir() -> None:
     assert hw.disks[0].name == "sda"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_resolve_test_multi_disk_profile() -> None:
     """test-multi-disk profile has 4 disk devices."""
     resolver = ProfileResolver(config_dir=FIXTURES)

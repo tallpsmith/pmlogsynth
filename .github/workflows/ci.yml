@@ -22,7 +22,7 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: mypy pmlogsynth/
-      - run: pytest tests/tier1/ tests/tier2/ -v
+      - run: pytest tests/unit/ tests/integration/ -v
 
   e2e:
     name: "E2E (system Python + PCP)"
@@ -37,4 +37,4 @@ jobs:
       - name: Install pmlogsynth (system Python)
         run: python3 -m pip install -e ".[dev]" --break-system-packages
       - name: Run E2E tests
-        run: python3 -m pytest tests/tier3/ -v
+        run: python3 -m pytest tests/e2e/ -v

@@ -3,11 +3,13 @@
 Auto-generated from all feature plans. Last updated: 2026-03-01
 
 ## Active Technologies
+- Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML (002-phase2-e2e-docs)
+- Temporary directories (via `tempfile.mkdtemp`) for E2E-generated archives; cleaned after each tes (002-phase2-e2e-docs)
 
 - **Language**: Python 3.8+ (minimum); Python 3.8 and latest stable both tested in CI
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
 - **Profile parsing**: PyYAML
-- **Testing**: pytest; `unittest.mock` (stdlib) for Tier 2 PCP stubs
+- **Testing**: pytest; `unittest.mock` (stdlib) for integration PCP stubs
 - **Linting**: ruff (rules: E, W, F, I) — `ruff check .`
 - **Type checking**: mypy (strict) — `mypy pmlogsynth/`
 - **Packaging**: pyproject.toml + setuptools
@@ -27,14 +29,14 @@ pmlogsynth/                 # installable Python package
     ├── cpu.py, memory.py, disk.py, network.py, load.py
 
 tests/
-├── conftest.py             # tier markers, PCP import detection
+├── conftest.py             # test markers, PCP import detection
 ├── fixtures/profiles/      # test hardware profiles (use with -C flag)
-├── tier1/                  # unit tests — no PCP needed
-├── tier2/                  # integration tests — PCP mocked
-└── tier3/                  # E2E tests — real PCP, conditionally skipped
+├── unit/                   # unit tests — no PCP needed
+├── integration/            # integration tests — PCP mocked
+└── e2e/                    # E2E tests — real PCP, conditionally skipped
 
 .github/workflows/ci.yml    # quality matrix (3.8 + latest) + E2E system Python job
-pre-commit.sh               # local quality gate (lint + types + Tier 1 + Tier 2)
+pre-commit.sh               # local quality gate (lint + types + unit + integration)
 ```
 
 ## Commands
@@ -47,9 +49,9 @@ pip install -e ".[dev]"
 ./pre-commit.sh
 
 # Run tests by tier
-pytest tests/tier1/ -v                     # unit tests, no PCP needed
-pytest tests/tier1/ tests/tier2/ -v        # all non-E2E tests
-pytest -v                                   # all tiers (Tier 3 auto-skipped if no PCP)
+pytest tests/unit/ -v                      # unit tests, no PCP needed
+pytest tests/unit/ tests/integration/ -v   # all non-E2E tests
+pytest -v                                   # all tiers (E2E auto-skipped if no PCP)
 
 # Individual quality checks
 ruff check .
@@ -64,7 +66,7 @@ pmlogsynth --list-metrics
 
 ## Key Invariants
 
-- **PCP library isolated in `writer.py`**: Tier 1 and Tier 2 MUST NOT import from `pcp.*`
+- **PCP library isolated in `writer.py`**: unit and integration tests MUST NOT import from `pcp.*`
 - **Stressor defaults applied at compute time**: `MetricModel.compute()` applies defaults,
   NOT `ProfileLoader`. Parsed stressor fields are `Optional` — `None` ≠ default value.
 - **Counter increments clamped ≥ 0**: noise must never produce negative counter deltas
@@ -79,6 +81,7 @@ pmlogsynth --list-metrics
 - No NumPy — use `random.gauss` from stdlib
 
 ## Recent Changes
+- 002-phase2-e2e-docs: Added Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML
 
 - 001-pmlogsynth-phase1: Initial project setup — Python 3.8+ CLI tool with
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery

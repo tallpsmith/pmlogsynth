@@ -1,13 +1,13 @@
-"""pytest configuration: tier markers and PCP availability detection."""
+"""pytest configuration: test markers and PCP availability detection."""
 
 import pytest
 
 
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
-    config.addinivalue_line("markers", "tier1: unit tests, no PCP required")
-    config.addinivalue_line("markers", "tier2: integration tests, PCP layer mocked")
-    config.addinivalue_line("markers", "tier3: E2E tests, real PCP library required")
+    config.addinivalue_line("markers", "unit: unit tests, no PCP required")
+    config.addinivalue_line("markers", "integration: integration tests, PCP layer mocked")
+    config.addinivalue_line("markers", "e2e: E2E tests, real PCP library required")
 
 
 def _pcp_importable() -> bool:

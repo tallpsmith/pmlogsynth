@@ -52,7 +52,7 @@ phases:
     return profile
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_registers_metrics(tmp_path: Path) -> None:
     """ArchiveWriter calls pmiAddMetric for at least one metric from each domain."""
     hardware = _make_hardware()
@@ -85,7 +85,7 @@ def test_writer_registers_metrics(tmp_path: Path) -> None:
     assert any("kernel.all.load" in m for m in add_metric_calls)
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_registers_instances(tmp_path: Path) -> None:
     """ArchiveWriter calls pmiAddInstance for CPU, disk, and NIC instances."""
     hardware = _make_hardware()
@@ -114,7 +114,7 @@ def test_writer_registers_instances(tmp_path: Path) -> None:
     assert "eth0" in instance_names
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_calls_pmiwrite_per_sample(tmp_path: Path) -> None:
     """pmiWrite is called once per sample in the timeline."""
     hardware = _make_hardware()
@@ -140,7 +140,7 @@ def test_writer_calls_pmiwrite_per_sample(tmp_path: Path) -> None:
     assert mock_log.pmiWrite.call_count == expected_samples
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_sets_hostname_and_timezone(tmp_path: Path) -> None:
     """pmiSetHostname and pmiSetTimezone are called with profile values."""
     hardware = _make_hardware()
@@ -166,7 +166,7 @@ def test_writer_sets_hostname_and_timezone(tmp_path: Path) -> None:
     mock_log.pmiSetTimezone.assert_called_once_with("UTC")
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_conflict_detection(tmp_path: Path) -> None:
     """Writer raises error if output files already exist (FR-053)."""
     hardware = _make_hardware()
@@ -186,7 +186,7 @@ def test_writer_conflict_detection(tmp_path: Path) -> None:
             writer.write(timeline=timeline, sampler=sampler)
 
 
-@pytest.mark.tier2
+@pytest.mark.integration
 def test_writer_force_overwrites(tmp_path: Path) -> None:
     """--force flag allows overwriting existing archive files (FR-054)."""
     hardware = _make_hardware()

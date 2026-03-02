@@ -20,7 +20,7 @@ def _load_str(yaml_text: str, config_dir: Path = FIXTURES) -> WorkloadProfile:
     return WorkloadProfile.from_string(yaml_text, config_dir=config_dir)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_good_baseline_passes() -> None:
     """good-baseline.yaml should parse without error."""
     profile = _load("good-baseline.yaml")
@@ -28,28 +28,28 @@ def test_good_baseline_passes() -> None:
     assert len(profile.phases) == 2
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_bad_ratio_raises_fr026() -> None:
     """CPU ratios summing > 1.0 raise ValidationError (FR-026)."""
     with pytest.raises(ValidationError, match="FR-026"):
         _load("bad-ratio.yaml")
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_bad_duration_raises_fr027() -> None:
     """Phase duration sum != meta.duration raises ValidationError (FR-027)."""
     with pytest.raises(ValidationError, match="FR-027"):
         _load("bad-duration.yaml")
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_bad_noise_raises_fr029() -> None:
     """meta.noise out of [0.0, 1.0] raises ValidationError (FR-029)."""
     with pytest.raises(ValidationError, match="FR-029"):
         _load("bad-noise.yaml")
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_bad_interval_raises_fr030() -> None:
     """meta.interval = 0 raises ValidationError (FR-030)."""
     yaml_text = """
@@ -66,7 +66,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_first_phase_linear_raises_fr055() -> None:
     """First phase with transition: linear raises ValidationError (FR-055)."""
     yaml_text = """
@@ -85,7 +85,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_unknown_profile_raises_fr028() -> None:
     """Unknown host.profile name raises ValidationError (FR-028)."""
     yaml_text = """
@@ -101,7 +101,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_inline_fields_with_profile_no_overrides_raises_fr015a() -> None:
     """host.profile + inline fields without overrides: raises ValidationError (FR-015a)."""
     yaml_text = """
@@ -118,7 +118,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_repeat_daily_overflow_raises_fr031() -> None:
     """repeat:daily sole phase with duration > meta.duration raises ValidationError (FR-031)."""
     yaml_text = """
@@ -135,7 +135,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_repeat_daily_with_other_phases_raises() -> None:
     """repeat:daily phase cannot coexist with other explicit phases (duration overflow)."""
     yaml_text = """
@@ -154,7 +154,7 @@ phases:
         _load_str(yaml_text)
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_inline_host_form_valid() -> None:
     """Fully inline host spec is valid without needing -C."""
     yaml_text = """
@@ -177,7 +177,7 @@ phases:
     assert profile.hardware.cpus == 2
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_profile_with_overrides_valid() -> None:
     """host.profile + overrides: is valid (FR-015a form 2)."""
     yaml_text = """
@@ -196,7 +196,7 @@ phases:
     assert profile.hardware.cpus == 4
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_from_file_delegates_to_from_string(tmp_path: Path) -> None:
     """WorkloadProfile.from_file() correctly loads a bundled-profile spec."""
     # Use a profile that only references bundled 'generic-small'

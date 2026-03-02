@@ -49,14 +49,14 @@ def _capture_list_metrics() -> list:
     return [line for line in buf.getvalue().splitlines() if line.strip()]
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_metrics_contains_24_names() -> None:
     """--list-metrics output contains exactly 24 metric names."""
     lines = _capture_list_metrics()
     assert len(lines) == 24, f"Expected 24 metrics, got {len(lines)}: {lines}"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_metrics_matches_schema() -> None:
     """--list-metrics output matches cli-schema.md metric list exactly."""
     lines = _capture_list_metrics()
@@ -68,14 +68,14 @@ def test_list_metrics_matches_schema() -> None:
     )
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_metrics_is_sorted() -> None:
     """--list-metrics output is sorted lexicographically."""
     lines = _capture_list_metrics()
     assert lines == sorted(lines), f"Metrics not sorted: {lines}"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_metrics_no_trailing_whitespace() -> None:
     """Each line in --list-metrics output has no trailing whitespace."""
     lines = _capture_list_metrics()
@@ -83,7 +83,7 @@ def test_list_metrics_no_trailing_whitespace() -> None:
         assert line == line.rstrip(), f"Trailing whitespace in: {line!r}"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_list_metrics_covers_all_domains() -> None:
     """At least one metric from each of the 5 domains is present."""
     lines = _capture_list_metrics()
@@ -96,7 +96,7 @@ def test_list_metrics_covers_all_domains() -> None:
     assert "kernel.all.load" in metric_set, "No load metric"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_domain_descriptors_match_cli_metric_names() -> None:
     """Metric names from all domain MetricModel.metric_descriptors() match _ALL_METRIC_NAMES."""
     from pmlogsynth.cli import _ALL_METRIC_NAMES  # type: ignore[attr-defined]

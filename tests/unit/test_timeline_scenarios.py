@@ -44,7 +44,7 @@ def _make_profile(
     )
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_instant_transition_holds_phase_value() -> None:
     """Instant transition: all samples in a phase use the phase's target values."""
     phases = [
@@ -65,7 +65,7 @@ def test_instant_transition_holds_phase_value() -> None:
         assert sp.cpu.utilization == 0.80
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_linear_transition_interpolates_cpu() -> None:
     """Linear transition: first sample ≈ start value, last sample ≈ target."""
     phases = [
@@ -100,7 +100,7 @@ def test_linear_transition_interpolates_cpu() -> None:
         assert b >= a, f"Not monotonically increasing: {a} -> {b}"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_linear_transition_midpoint() -> None:
     """Linear transition: midpoint sample is approximately halfway between endpoints."""
     phases = [
@@ -124,7 +124,7 @@ def test_linear_transition_midpoint() -> None:
     assert abs(mid_util - 0.5) < 0.01, f"Midpoint util expected 0.5, got {mid_util}"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_repeat_integer_produces_n_copies() -> None:
     """repeat: N produces N copies of the phase."""
     phases = [
@@ -140,7 +140,7 @@ def test_repeat_integer_produces_n_copies() -> None:
     assert len(timeline.samples) == 10  # 600s / 60s
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_repeat_daily_expands_correctly() -> None:
     """repeat: daily produces one peak + one fill per day for the total duration.
 
@@ -156,7 +156,7 @@ def test_repeat_daily_expands_correctly() -> None:
     assert len(timeline.samples) == 24  # 86400s / 3600s interval
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_sample_timestamps_are_sequential() -> None:
     """Sample timestamps increase by exactly meta.interval each step."""
     phases = [Phase(name="p", duration=300, cpu=CpuStressor(utilization=0.5))]
@@ -168,7 +168,7 @@ def test_sample_timestamps_are_sequential() -> None:
         assert ts_list[i] - ts_list[i - 1] == 60
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_sample_count_matches_duration_over_interval() -> None:
     """Number of samples == meta.duration // meta.interval."""
     phases = [Phase(name="p", duration=600)]
@@ -177,7 +177,7 @@ def test_sample_count_matches_duration_over_interval() -> None:
     assert len(timeline.samples) == 20  # 600 / 30
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_sample_point_fields_populated() -> None:
     """Every SamplePoint has all four stressor objects set."""
     phases = [Phase(name="p", duration=60)]
@@ -191,7 +191,7 @@ def test_sample_point_fields_populated() -> None:
     assert sp.phase_name == "p"
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_stressor_defaults_are_none_in_sample_points() -> None:
     """Stressor fields with no value remain None in SamplePoints (defaults at compute time)."""
     phases = [Phase(name="p", duration=60)]
@@ -202,7 +202,7 @@ def test_stressor_defaults_are_none_in_sample_points() -> None:
     assert sp.cpu.utilization is None
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_both_cpu_and_memory_interpolate_independently() -> None:
     """Linear transition interpolates CPU and memory stressors independently."""
     phases = [
@@ -230,7 +230,7 @@ def test_both_cpu_and_memory_interpolate_independently() -> None:
     assert high_sp.memory.used_ratio > 0.6
 
 
-@pytest.mark.tier1
+@pytest.mark.unit
 def test_fixture_linear_ramp_profile() -> None:
     """workload-linear-ramp.yaml loads and expands to correct sample count."""
     fixtures_root = Path(__file__).parent.parent / "fixtures"

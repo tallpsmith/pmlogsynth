@@ -37,8 +37,8 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 markers = [
-    "tier1: unit tests, no PCP required",
-    "tier2: integration tests, PCP mocked",
-    "tier3: E2E tests, real PCP required",
+    "unit: unit tests, no PCP required",
+    "integration: integration tests, PCP mocked",
+    "e2e: E2E tests, real PCP required",
 ]
 testpaths = ["tests"]

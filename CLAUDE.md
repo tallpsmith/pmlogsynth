@@ -4,7 +4,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-01
 
 ## Active Technologies
 
-- **Language**: Python 3.8+ (minimum); Python 3.8 and latest stable both tested in CI
+- **Language**: Python 3.8+ (minimum); system Python tested in CI with PCP installed
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
 - **Profile parsing**: PyYAML
 - **Testing**: pytest; `unittest.mock` (stdlib) for Tier 2 PCP stubs
@@ -34,7 +34,7 @@ tests/
 ├── tier2/                  # integration tests — PCP mocked
 └── tier3/                  # E2E tests — real PCP, conditionally skipped
 
-.github/workflows/ci.yml    # quality matrix (3.8 + latest) + E2E system Python job
+.github/workflows/ci.yml    # quality (system Python + PCP) + E2E job
 pre-commit.sh               # local quality gate (lint + types + Tier 1 + Tier 2)
 ```
 
@@ -65,10 +65,8 @@ pmlogsynth --list-metrics
 
 ## Key Invariants
 
-- **PCP is a runtime dependency**: `python3-pcp` must be installed for archive
-  generation.  `pcp_constants.py` imports from `cpmapi` when available, falling
-  back to well-known stable ABI integers so that domain modules remain importable
-  without PCP (required for Tier 1/2 CI).
+- **PCP is a hard dependency**: `python3-pcp` must be installed.
+  `pcp_constants.py` imports type/sem/unit constants directly from `cpmapi`.
   Domain modules and tests import from `pcp_constants`, never from `cpmapi` directly.
 - **PCP archive writing isolated in `writer.py`**: only `writer.py` imports `pcp.pmi`
 - **Stressor defaults applied at compute time**: `MetricModel.compute()` applies defaults,

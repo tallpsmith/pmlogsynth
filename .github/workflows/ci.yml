@@ -41,6 +41,7 @@ jobs:
           python3 --version
           python3 -c "import sys; print('sys.path:', sys.path)"
           python3 -c "import pcp; print('pcp location:', pcp.__file__)"
-          python3 -c "import pcp.pmi as pmi; print('pmi attrs:', [a for a in dir(pmi) if not a.startswith('_')])"
-      - name: Run E2E tests
-        run: python3 -m pytest tests/tier3/ -v
+          python3 -c "import pcp.pmi as pmi; print('pmi module:', pmi); print('pmi file:', getattr(pmi, '__file__', 'n/a')); print('pmi attrs:', [a for a in dir(pmi) if not a.startswith('_')])"
+          python3 -c "import pcp.pmi as pmi; lc = getattr(pmi, 'pmiLogImport', None); print('pmiLogImport:', lc); print('pmiLogImport attrs:', [a for a in dir(lc) if not a.startswith('_')] if lc else 'N/A')"
+      - name: Run E2E tests (with output)
+        run: python3 -m pytest tests/tier3/ -v -s --tb=long

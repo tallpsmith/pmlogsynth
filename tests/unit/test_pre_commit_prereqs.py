@@ -15,9 +15,6 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).parents[2] / "pre-commit.sh"
 
-# Minimal system PATH — no venv, no Homebrew, no site-specific dirs.
-_SYSTEM_PATH = "/bin:/usr/bin"
-
 
 def make_stub(directory: Path, name: str, exit_code: int = 0) -> None:
     """Create a minimal stub executable that exits with exit_code."""
@@ -40,9 +37,16 @@ def make_python3_stub(directory: Path, cpmapi_ok: bool, pcp_pmi_ok: bool) -> Non
     stub.chmod(0o755)
 
 
+def make_uname_stub(directory: Path) -> None:
+    """Create a uname stub reporting Linux — avoids picking up real system uname."""
+    stub = directory / "uname"
+    stub.write_text("#!/bin/bash\necho Linux\n")
+    stub.chmod(0o755)
+
+
 def run_script(env: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["bash", str(SCRIPT)],
+        ["/bin/bash", str(SCRIPT)],
         env=env,
         capture_output=True,
         text=True,
@@ -51,14 +55,16 @@ def run_script(env: dict) -> subprocess.CompletedProcess:
 
 def base_env(tmp_path: Path) -> tuple:
     """
-    Minimal isolated env: restricted PATH, no VIRTUAL_ENV.
+    Fully isolated env: PATH contains only bin_dir so no system binaries
+    (including pmpython) can leak in.  Provides python3 and uname stubs.
     python3 stub defaults to both imports failing (all-missing scenario).
     """
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     make_python3_stub(bin_dir, cpmapi_ok=False, pcp_pmi_ok=False)
+    make_uname_stub(bin_dir)
     env = {
-        "PATH": f"{bin_dir}:{_SYSTEM_PATH}",
+        "PATH": str(bin_dir),
         "HOME": str(tmp_path),
     }
     return env, bin_dir

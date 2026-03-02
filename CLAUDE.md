@@ -65,8 +65,10 @@ pmlogsynth --list-metrics
 
 ## Key Invariants
 
-- **PCP is a hard dependency**: `python3-pcp` must be installed.
-  `pcp_constants.py` imports type/sem/unit constants directly from `cpmapi`.
+- **PCP is a runtime dependency**: `python3-pcp` must be installed for archive
+  generation.  `pcp_constants.py` imports from `cpmapi` when available, falling
+  back to well-known stable ABI integers so that domain modules remain importable
+  without PCP (required for Tier 1/2 CI).
   Domain modules and tests import from `pcp_constants`, never from `cpmapi` directly.
 - **PCP archive writing isolated in `writer.py`**: only `writer.py` imports `pcp.pmi`
 - **Stressor defaults applied at compute time**: `MetricModel.compute()` applies defaults,

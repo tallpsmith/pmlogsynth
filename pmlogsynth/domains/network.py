@@ -3,13 +3,10 @@
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_BYTES, UNITS_COUNT
 from pmlogsynth.profile import HardwareProfile, NetworkStressor
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_U64 = 3
-_PM_SEM_COUNTER = 1
-_UNITS_BYTES = (1, 0, 0, 0, 0, 0)
-_UNITS_COUNT = (0, 0, 1, 0, 0, 0)
 _NET_INDOM = (60, 2)
 
 _DEFAULT_RX_MBPS = 0.0
@@ -28,34 +25,34 @@ class NetworkMetricModel(MetricModel):
             MetricDescriptor(
                 name="network.interface.in.bytes",
                 pmid=(60, 3, 3),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_NET_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_BYTES,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_BYTES,
             ),
             MetricDescriptor(
                 name="network.interface.out.bytes",
                 pmid=(60, 3, 11),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_NET_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_BYTES,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_BYTES,
             ),
             MetricDescriptor(
                 name="network.interface.in.packets",
                 pmid=(60, 3, 0),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_NET_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_COUNT,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_COUNT,
             ),
             MetricDescriptor(
                 name="network.interface.out.packets",
                 pmid=(60, 3, 8),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_NET_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_COUNT,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_COUNT,
             ),
         ]
 

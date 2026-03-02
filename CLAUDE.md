@@ -3,10 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-03-01
 
 ## Active Technologies
-- Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML (002-phase2-e2e-docs)
-- Temporary directories (via `tempfile.mkdtemp`) for E2E-generated archives; cleaned after each tes (002-phase2-e2e-docs)
 
-- **Language**: Python 3.8+ (minimum); Python 3.8 and latest stable both tested in CI
+- **Language**: Python 3.8+ (minimum); system Python tested in CI with PCP installed
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
 - **Profile parsing**: PyYAML
 - **Testing**: pytest; `unittest.mock` (stdlib) for integration PCP stubs
@@ -35,8 +33,8 @@ tests/
 ├── integration/            # integration tests — PCP mocked
 └── e2e/                    # E2E tests — real PCP, conditionally skipped
 
-.github/workflows/ci.yml    # quality matrix (3.8 + latest) + E2E system Python job
-pre-commit.sh               # local quality gate (lint + types + unit + integration)
+.github/workflows/ci.yml    # quality (system Python + PCP) + E2E job
+pre-commit.sh               # local quality gate (lint + types + Tier 1 + Tier 2)
 ```
 
 ## Commands
@@ -66,7 +64,10 @@ pmlogsynth --list-metrics
 
 ## Key Invariants
 
-- **PCP library isolated in `writer.py`**: unit and integration tests MUST NOT import from `pcp.*`
+- **PCP is a hard dependency**: `python3-pcp` must be installed.
+  `pcp_constants.py` imports type/sem/unit constants directly from `cpmapi`.
+  Domain modules and tests import from `pcp_constants`, never from `cpmapi` directly.
+- **PCP archive writing isolated in `writer.py`**: only `writer.py` imports `pcp.pmi`
 - **Stressor defaults applied at compute time**: `MetricModel.compute()` applies defaults,
   NOT `ProfileLoader`. Parsed stressor fields are `Optional` — `None` ≠ default value.
 - **Counter increments clamped ≥ 0**: noise must never produce negative counter deltas

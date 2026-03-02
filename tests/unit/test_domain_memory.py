@@ -3,6 +3,7 @@
 import pytest
 
 from pmlogsynth.domains.memory import MemoryMetricModel
+from pmlogsynth.pcp_constants import PM_SEM_DISCRETE, PM_SEM_INSTANT
 from pmlogsynth.profile import HardwareProfile, MemoryStressor
 from pmlogsynth.sampler import ValueSampler
 
@@ -214,15 +215,13 @@ def test_metric_descriptors_pmids():
 
 def test_metric_descriptors_semantics():
     """mem.physmem must be PM_SEM_DISCRETE; util metrics must be PM_SEM_INSTANT."""
-    _PM_SEM_INSTANT = 3
-    _PM_SEM_DISCRETE = 4
     hw = make_hw()
     model = make_model()
     descriptors = model.metric_descriptors(hw)
     sem_map = {d.name: d.sem for d in descriptors}
-    assert sem_map["mem.physmem"] == _PM_SEM_DISCRETE
+    assert sem_map["mem.physmem"] == PM_SEM_DISCRETE
     for name in ("mem.util.used", "mem.util.free", "mem.util.cached", "mem.util.bufmem"):
-        assert sem_map[name] == _PM_SEM_INSTANT
+        assert sem_map[name] == PM_SEM_INSTANT
 
 
 def test_metric_descriptors_indom_null():

@@ -9,3 +9,26 @@
 
 # Claude local settings (user-specific permissions)
 .claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
+
+# Test artifacts
+/tmp/

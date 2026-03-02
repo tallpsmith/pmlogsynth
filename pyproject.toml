@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pmlogsynth"
+version = "0.1.0"
+description = "Synthetic PCP archive generator from declarative YAML workload profiles"
+requires-python = ">=3.8"
+dependencies = ["PyYAML>=5.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.3", "mypy>=1.0", "types-PyYAML>=6.0"]
+ai  = ["anthropic>=0.20.0"]
+
+[project.scripts]
+pmlogsynth = "pmlogsynth.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pmlogsynth*"]
+
+[tool.setuptools.package-data]
+pmlogsynth = ["profiles/*.yaml"]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "tier1: unit tests, no PCP required",
+    "tier2: integration tests, PCP mocked",
+    "tier3: E2E tests, real PCP required",
+]
+testpaths = ["tests"]

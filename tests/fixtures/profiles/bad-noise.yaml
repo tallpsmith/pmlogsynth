@@ -1,0 +1,12 @@
+meta:
+  hostname: test-host
+  duration: 600
+  interval: 60
+  noise: 1.5   # out of [0.0, 1.0] range — violates FR-029
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: baseline
+    duration: 600

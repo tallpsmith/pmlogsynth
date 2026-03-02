@@ -1,0 +1,25 @@
+meta:
+  hostname: test-host
+  timezone: UTC
+  duration: 1200
+  interval: 60
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: baseline
+    duration: 300
+    cpu:
+      utilization: 0.15
+
+  - name: ramp
+    duration: 300
+    transition: linear
+    cpu:
+      utilization: 0.90
+
+  - name: spike
+    duration: 600
+    cpu:
+      utilization: 0.90

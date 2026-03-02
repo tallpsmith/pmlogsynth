@@ -1,0 +1,30 @@
+meta:
+  hostname: test-host
+  timezone: UTC
+  duration: 600
+  interval: 60
+  noise: 0.03
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: baseline
+    duration: 300
+    cpu:
+      utilization: 0.15
+      user_ratio: 0.70
+      sys_ratio: 0.20
+      iowait_ratio: 0.10
+    memory:
+      used_ratio: 0.40
+
+  - name: spike
+    duration: 300
+    cpu:
+      utilization: 0.90
+      user_ratio: 0.85
+      sys_ratio: 0.10
+      iowait_ratio: 0.05
+    memory:
+      used_ratio: 0.60

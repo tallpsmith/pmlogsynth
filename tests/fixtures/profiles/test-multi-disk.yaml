@@ -1,0 +1,11 @@
+name: test-multi-disk
+cpus: 2
+memory_kb: 8388608
+disks:
+  - name: sda
+  - name: sdb
+  - name: sdc
+  - name: sdd
+interfaces:
+  - name: eth0
+    speed_mbps: 10000

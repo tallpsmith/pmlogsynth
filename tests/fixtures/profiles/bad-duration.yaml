@@ -1,0 +1,13 @@
+meta:
+  hostname: test-host
+  duration: 600   # phases sum to 500, not 600 — violates FR-027
+  interval: 60
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: phase-a
+    duration: 300
+  - name: phase-b
+    duration: 200   # 300 + 200 = 500 != 600

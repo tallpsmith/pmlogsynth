@@ -1,0 +1,15 @@
+meta:
+  hostname: test-host
+  timezone: UTC
+  duration: 86400
+  interval: 3600
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: noon-peak
+    duration: 3600
+    repeat: daily
+    cpu:
+      utilization: 0.90

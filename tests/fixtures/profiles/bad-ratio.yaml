@@ -1,0 +1,16 @@
+meta:
+  hostname: test-host
+  duration: 600
+  interval: 60
+
+host:
+  profile: test-single-cpu
+
+phases:
+  - name: bad-cpu
+    duration: 600
+    cpu:
+      utilization: 0.80
+      user_ratio: 0.70
+      sys_ratio: 0.30
+      iowait_ratio: 0.10   # sum = 1.10 > 1.0, violates FR-026

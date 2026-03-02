@@ -12,8 +12,9 @@ historical timestamps, and generating load-shaped datasets for analysis tooling.
 
 ## Installation
 
-**Prerequisites**: PCP must be installed to write archives (`libpcp_import`) and to
-verify them (`pmlogcheck`, `pmval`).
+**Prerequisites**: PCP (`python3-pcp` / `cpmapi`) is a **hard dependency** — it is
+required at import time for metric type and unit constants, not just for archive
+writing.  All tests (unit, integration, and E2E) need PCP's Python bindings available.
 
 **Linux (Debian/Ubuntu)**:
 ```bash
@@ -27,8 +28,12 @@ sudo dnf install pcp python3-pcp
 pip install pmlogsynth
 ```
 
-**macOS** (Homebrew): PCP's Python bindings are installed into Homebrew's Python only.
-Use `pmpython` or a virtualenv built from the Homebrew Python:
+**macOS** (Homebrew): PCP compiles its Python bindings against Homebrew's Python
+(currently `python@3.14`).  The bindings are **only** available to that specific
+Python — if you run pmlogsynth or its tests from a different Python (system, pyenv,
+conda), `import cpmapi` will fail.
+
+Create a virtualenv from Homebrew's Python so the PCP bindings are on `sys.path`:
 ```bash
 $(readlink -f $(which pmpython)) -m venv .venv
 source .venv/bin/activate
@@ -41,6 +46,9 @@ git clone https://github.com/tallpsmith/pmlogsynth
 cd pmlogsynth
 pip install -e ".[dev]"
 ```
+
+> **macOS note**: make sure your venv is created from Homebrew's Python (see above)
+> before running `pip install`, otherwise `import cpmapi` will fail at runtime.
 
 ---
 
@@ -142,17 +150,20 @@ Full CLI reference — `man pmlogsynth`.
 
 ## Running Tests
 
+PCP's Python bindings (`cpmapi`) are required for **all** test tiers — the package
+imports PCP constants at module level.  See [Installation](#installation) for setup.
+
 ```bash
-# Unit tests (no PCP needed)
+# Unit tests
 pytest tests/unit/ -v
 
-# Unit + integration tests (PCP mocked)
+# Unit + integration tests
 pytest tests/unit/ tests/integration/ -v
 
-# All tiers (E2E auto-skipped if pcp.pmi unavailable)
+# All tiers (E2E needs pcp.pmi for archive writing)
 pytest -v
 
-# Full local quality gate (lint + types + unit + integration)
+# Full local quality gate (lint + types + all tiers)
 ./pre-commit.sh
 ```
 

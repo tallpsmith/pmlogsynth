@@ -20,7 +20,7 @@ jobs:
         run: python3 -m pip install -e ".[dev]" --break-system-packages
       - run: ruff check .
       - run: python3 -m mypy pmlogsynth/
-      - run: python3 -m pytest tests/tier1/ tests/tier2/ -v
+      - run: python3 -m pytest tests/unit/ tests/integration/ -v
 
   e2e:
     name: "E2E (system Python + PCP)"

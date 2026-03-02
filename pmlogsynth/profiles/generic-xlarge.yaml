@@ -1,0 +1,13 @@
+name: generic-xlarge
+cpus: 16
+memory_kb: 67108864
+disks:
+  - name: nvme0n1
+    type: nvme
+  - name: nvme1n1
+    type: nvme
+interfaces:
+  - name: eth0
+    speed_mbps: 10000
+  - name: eth1
+    speed_mbps: 10000

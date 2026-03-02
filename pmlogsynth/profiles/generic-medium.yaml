@@ -1,0 +1,9 @@
+name: generic-medium
+cpus: 4
+memory_kb: 16777216
+disks:
+  - name: nvme0n1
+    type: nvme
+interfaces:
+  - name: eth0
+    speed_mbps: 10000

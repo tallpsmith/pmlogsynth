@@ -1,0 +1,15 @@
+name: storage-optimized
+cpus: 4
+memory_kb: 16777216
+disks:
+  - name: sda
+    type: hdd
+  - name: sdb
+    type: hdd
+  - name: sdc
+    type: hdd
+  - name: sdd
+    type: hdd
+interfaces:
+  - name: eth0
+    speed_mbps: 10000

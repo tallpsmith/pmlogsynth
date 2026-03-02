@@ -1,0 +1,9 @@
+name: generic-small
+cpus: 2
+memory_kb: 8388608
+disks:
+  - name: nvme0n1
+    type: nvme
+interfaces:
+  - name: eth0
+    speed_mbps: 10000

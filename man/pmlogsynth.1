@@ -1,0 +1,435 @@
+.\" Man page for pmlogsynth
+.\" Generated 2026-03-02
+.TH PMLOGSYNTH 1 "March 2026" "pmlogsynth 0.1.0" "User Commands"
+.SH NAME
+pmlogsynth \- generate synthetic PCP archives from declarative YAML profiles
+.SH SYNOPSIS
+.B pmlogsynth
+[\fIGLOBAL OPTIONS\fR]
+[\fIPROFILE\fR]
+[\fIOPTIONS\fR]
+.br
+.B pmlogsynth
+[\fB\-\-config\-dir\fR \fIDIR\fR]
+\fB\-\-list\-profiles\fR
+.br
+.B pmlogsynth
+\fB\-\-list\-metrics\fR
+.br
+.B pmlogsynth
+\fB\-\-validate\fR
+[\fB\-C\fR \fIDIR\fR]
+\fIPROFILE\fR
+.SH DESCRIPTION
+.B pmlogsynth
+reads a YAML workload profile and writes a valid PCP version 3 archive
+(\fI.0\fR, \fI.index\fR, \fI.meta\fR) that can be consumed by standard PCP
+tools such as
+.BR pmval (1),
+.BR pmrep (1),
+.BR pmlogcheck (1),
+and
+.BR pmlogdump (1).
+No running
+.B pmcd
+is required, and no root access is needed.
+.PP
+The profile specifies a hostname, a duration, an interval, one or more
+phases with workload stressors (CPU, memory, disk, network), and an optional
+named hardware profile that determines the instance topology (number of CPUs,
+disk devices, and network interfaces).
+.PP
+The default subcommand is
+.BR generate ,
+so
+.B pmlogsynth profile.yaml
+is equivalent to
+.BR "pmlogsynth generate profile.yaml" .
+.SH OPTIONS
+.SS Global Options
+.TP
+.BR \-V ", " \-\-version
+Print version and exit.
+.TP
+.BR \-h ", " \-\-help
+Print help and exit.
+.SS Generate Options
+.TP
+\fIPROFILE\fR
+Path to the YAML workload profile file (required).
+.TP
+.BI \-o " PATH" ", \-\-output " PATH
+Output archive base name.
+The tool writes
+.IB PATH .0 ", " PATH .index ", and " PATH .meta .
+Default:
+.IR ./pmlogsynth-out .
+.TP
+.BI \-\-start " TIMESTAMP"
+Archive start time.
+Accepts ISO\ 8601 (\fI2024-01-15T09:00:00Z\fR) or human-readable
+(\fI"2024-01-15 09:00:00 UTC"\fR) format.
+Default: now \- \fImeta.duration\fR (archive ends approximately now).
+.TP
+.BR \-v ", " \-\-verbose
+Print per-sample metric values to stderr as the archive is written.
+.TP
+.B \-\-validate
+Validate the profile only; do not write any files.
+Exits 0 on success, 1 on validation error.
+Incompatible with
+.BR \-o ,
+.BR \-\-start ,
+.BR \-\-force ,
+and
+.BR \-\-leave\-partial .
+.TP
+.B \-\-force
+Overwrite existing archive files without error (suppresses exit code 2
+pre-existence check).
+.TP
+.B \-\-leave\-partial
+On failure, leave partially-written files in place and print a warning
+to stderr identifying them.
+By default, all partially-written files are deleted.
+.TP
+.BI \-C " DIR" ", \-\-config\-dir " DIR
+Additional hardware profile directory (highest precedence).
+All
+.I .yaml
+files in this directory are treated as hardware profiles.
+Useful for test-specific profiles without touching
+.IR ~/.pcp/pmlogsynth/profiles/ .
+.SS Informational Options
+.TP
+.B \-\-list\-profiles
+Print all available hardware profiles with source label and exit.
+Respects
+.BR \-C / \-\-config\-dir .
+.TP
+.B \-\-list\-metrics
+Print all PCP metric names the tool can produce, one per line,
+sorted lexicographically, and exit.
+.SH YAML PROFILE FORMAT
+A workload profile is a YAML document with three top-level sections.
+.SS meta
+.TP
+.B hostname
+Archive hostname (default:
+.IR synthetic-host ).
+.TP
+.B timezone
+Archive timezone string (default:
+.IR UTC ).
+.TP
+.B duration
+Total archive duration in seconds (required, positive integer).
+.TP
+.B interval
+Sample interval in seconds (default: 60).
+.TP
+.B noise
+Global multiplicative Gaussian noise level, range [0.0, 1.0] (default: 0.0).
+.TP
+.B mean_packet_bytes
+Average packet size used for packet-count estimation (default: 1400).
+.SS host
+Three mutually exclusive forms:
+.PP
+\fBForm 1\fR — Named profile only:
+.PP
+.RS
+.nf
+host:
+  profile: generic-large
+.fi
+.RE
+.PP
+\fBForm 2\fR — Named profile with overrides:
+.PP
+.RS
+.nf
+host:
+  profile: generic-large
+  overrides:
+    cpus: 16
+.fi
+.RE
+.PP
+\fBForm 3\fR — Fully inline:
+.PP
+.RS
+.nf
+host:
+  name: my-host
+  cpus: 4
+  memory_kb: 16384000
+  disks:
+    - name: sda
+      type: ssd
+  interfaces:
+    - name: eth0
+      speed_mbps: 10000
+.fi
+.RE
+.PP
+Mixing inline fields with
+.B profile:
+without an
+.B overrides:
+key is a validation error.
+.SS phases
+An ordered list of named time segments.
+Each phase has:
+.TP
+.B name
+Phase identifier string (required).
+.TP
+.B duration
+Phase duration in seconds (required, positive integer).
+.TP
+.B transition
+.I instant
+(default) or
+.IR linear .
+Linear interpolates stressor values from the previous phase's final values
+to this phase's target values over the full phase duration.
+The first phase cannot use
+.IR linear .
+.TP
+.B repeat
+.I daily
+or an integer count.
+.I daily
+repeats the phase once per 24-hour period within
+.IR meta.duration .
+Integer repeats the phase exactly N times.
+.TP
+.BR cpu ", " memory ", " disk ", " network
+Domain-specific stressor blocks (all fields optional).
+.SS CPU stressor
+.TP
+.B utilization
+Overall CPU utilization fraction [0.0, 1.0] (default 0.0 at compute time).
+.TP
+.BR user_ratio ", " sys_ratio ", " iowait_ratio
+Fractions of utilization allocated to each CPU state.
+Sum must not exceed 1.0 (FR-026).
+Defaults: 0.70 / 0.20 / 0.10.
+.TP
+.B noise
+Per-domain noise override (inherits
+.I meta.noise
+if absent).
+.SS Memory stressor
+.TP
+.B used_ratio
+Fraction of total RAM in use [0.0, 1.0] (default 0.50 at compute time).
+.TP
+.B cache_ratio
+Fraction of used RAM that is page cache (default 0.30 at compute time).
+.TP
+.B noise
+Per-domain noise override.
+.SS Disk stressor
+.TP
+.BR read_mbps ", " write_mbps
+Read and write throughput in MB/s (default 0.0 at compute time).
+.TP
+.BR iops_read ", " iops_write
+IOPS counts (estimated from MB/s with a 64\ KB block if not specified).
+.TP
+.B noise
+Per-domain noise override.
+.SS Network stressor
+.TP
+.BR rx_mbps ", " tx_mbps
+Receive and transmit throughput in MB/s (default 0.0 at compute time).
+.TP
+.B noise
+Per-domain noise override.
+.SH HARDWARE PROFILES
+Hardware profiles define the physical/virtual host topology used to
+generate per-instance metrics (per-CPU, per-disk, per-NIC).
+.SS Bundled profiles
+.TS
+l l l l l.
+Name	CPUs	RAM	Disks	NICs
+_
+generic-small	2	8\ GB	1× NVMe	1× 10GbE
+generic-medium	4	16\ GB	1× NVMe	1× 10GbE
+generic-large	8	32\ GB	2× NVMe	1× 10GbE
+generic-xlarge	16	64\ GB	2× NVMe	2× 10GbE
+compute-optimized	8	16\ GB	1× NVMe	1× 10GbE
+memory-optimized	4	64\ GB	1× NVMe	1× 10GbE
+storage-optimized	4	16\ GB	4× HDD	1× 10GbE
+.TE
+.SS Precedence chain (highest to lowest)
+.IP 1. 4
+.BI \-C / \-\-config\-dir
+directory
+.IP 2. 4
+.I ~/.pcp/pmlogsynth/profiles/
+.IP 3. 4
+Bundled package data
+.SS User-defined profiles
+Copy a YAML file with the
+.B HardwareProfile
+schema to
+.IR ~/.pcp/pmlogsynth/profiles/ .
+It will appear with source
+.I user
+in
+.B \-\-list\-profiles
+output.
+.SH SUPPORTED METRICS
+.SS CPU (kernel domain)
+.TP
+.B kernel.all.cpu.idle
+Total CPU idle ticks across all CPUs (cumulative counter, milliseconds).
+.TP
+.B kernel.all.cpu.steal
+Total CPU steal ticks (cumulative counter, milliseconds).
+.TP
+.B kernel.all.cpu.sys
+Total CPU sys ticks (cumulative counter, milliseconds).
+.TP
+.B kernel.all.cpu.user
+Total CPU user ticks (cumulative counter, milliseconds).
+.TP
+.B kernel.all.cpu.wait.total
+Total CPU iowait ticks (cumulative counter, milliseconds).
+.TP
+.BR kernel.percpu.cpu.idle ", " kernel.percpu.cpu.sys ", " kernel.percpu.cpu.user
+Per-CPU versions of idle/sys/user ticks.
+Instance names: cpu0, cpu1, … (one per
+.I cpus
+in the hardware profile).
+.TP
+.B kernel.all.load
+1-minute, 5-minute, and 15-minute load averages (instantaneous float).
+Instances: "1 minute", "5 minute", "15 minute".
+.SS Memory (mem domain)
+.TP
+.BR mem.util.used ", " mem.util.free ", " mem.util.cached ", " mem.util.bufmem
+Memory utilisation counters in kibibytes (instantaneous).
+.TP
+.B mem.physmem
+Total physical RAM in kibibytes (discrete, constant).
+.SS Disk (disk domain)
+.TP
+.BR disk.all.read ", " disk.all.write
+Aggregate read/write IOPS across all disks (cumulative counter).
+.TP
+.BR disk.all.read_bytes ", " disk.all.write_bytes
+Aggregate read/write bytes across all disks (cumulative counter).
+.TP
+.BR disk.dev.read_bytes ", " disk.dev.write_bytes
+Per-device read/write bytes.
+Instance names match
+.I disk.name
+fields in the hardware profile.
+.SS Network (network domain)
+.TP
+.BR network.interface.in.bytes ", " network.interface.out.bytes
+Per-interface receive/transmit bytes (cumulative counter).
+.TP
+.BR network.interface.in.packets ", " network.interface.out.packets
+Per-interface receive/transmit packet counts (cumulative counter).
+Instance names match
+.I interface.name
+fields in the hardware profile.
+.SH CONSTRAINTS
+The following profile constraints are enforced at validation time:
+.TP
+.B FR-015a
+Mixing inline host fields with
+.B profile:
+without an
+.B overrides:
+key is invalid.
+.TP
+.B FR-026
+.IR user_ratio " + " sys_ratio " + " iowait_ratio " must not exceed 1.0."
+.TP
+.B FR-027
+Sum of phase durations must equal
+.I meta.duration
+(when no
+.B repeat
+key is present).
+.TP
+.B FR-029
+.I meta.noise
+must be in [0.0, 1.0].
+.TP
+.B FR-030
+.I meta.interval
+must be a positive integer.
+.TP
+.B FR-031
+.I repeat: daily
+phase duration must fit within
+.IR meta.duration .
+.TP
+.B FR-055
+The first phase cannot use
+.IR "transition: linear" .
+.SH EXAMPLES
+.SS Generate a 10-minute archive with a CPU spike
+.PP
+.nf
+pmlogsynth \-o ./out spike.yaml
+pmlogcheck ./out
+pmval \-a ./out kernel.all.cpu.user
+.fi
+.SS Validate a profile without writing files
+.PP
+.nf
+pmlogsynth \-\-validate spike.yaml
+echo "Exit code: $?"   # 0 = valid, 1 = invalid
+.fi
+.SS Replay a historical incident window
+.PP
+.nf
+pmlogsynth \-\-start "2024-01-15 09:00:00 UTC" \-o ./incident spike.yaml
+.fi
+.SS List available hardware profiles
+.PP
+.nf
+pmlogsynth \-\-list\-profiles
+pmlogsynth \-C ./tests/fixtures/profiles \-\-list\-profiles
+.fi
+.SS List all producible metrics
+.PP
+.nf
+pmlogsynth \-\-list\-metrics
+.fi
+.SH EXIT STATUS
+.TP
+.B 0
+Success (archive generated, validation passed, or informational command completed).
+.TP
+.B 1
+Validation error (profile schema, constraint violation, unknown hardware profile).
+.TP
+.B 2
+I/O error (output path not writable, output files exist without
+.BR \-\-force ,
+.B \-C
+directory not found).
+.TP
+.B 3
+Generation error (error during archive writing; partial files deleted unless
+.B \-\-leave\-partial
+is set).
+.SH FILES
+.TP
+.I ~/.pcp/pmlogsynth/profiles/
+User-defined hardware profiles directory.
+.SH SEE ALSO
+.BR pmlogcheck (1),
+.BR pmval (1),
+.BR pmrep (1),
+.BR pmlogdump (1),
+.BR pmlogimport (1)

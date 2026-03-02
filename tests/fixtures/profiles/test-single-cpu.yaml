@@ -1,0 +1,9 @@
+name: test-single-cpu
+cpus: 1
+memory_kb: 4194304
+disks:
+  - name: sda
+    type: ssd
+interfaces:
+  - name: eth0
+    speed_mbps: 1000

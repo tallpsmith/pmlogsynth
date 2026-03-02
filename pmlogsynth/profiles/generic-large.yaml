@@ -1,0 +1,11 @@
+name: generic-large
+cpus: 8
+memory_kb: 33554432
+disks:
+  - name: nvme0n1
+    type: nvme
+  - name: nvme1n1
+    type: nvme
+interfaces:
+  - name: eth0
+    speed_mbps: 10000

@@ -125,7 +125,8 @@ class ArchiveWriter:
                     values = model.compute(stressor, self._hardware, interval, sampler)
                     for metric_name, instances in values.items():
                         for instance, value in instances.items():
-                            log.pmiPutValue(metric_name, instance, str(value))
+                            inst = instance if instance is not None else ""
+                            log.pmiPutValue(metric_name, inst, str(value))
                 log.pmiWrite(sample.timestamp_sec, 0)
 
         except Exception as exc:

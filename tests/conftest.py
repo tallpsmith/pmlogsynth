@@ -11,12 +11,12 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def _pcp_importable() -> bool:
-    """Return True if pcp.pmi can be imported."""
+    """Return True if pcp.pmi can be imported without error."""
     try:
         import pcp.pmi  # noqa: F401
 
         return True
-    except ImportError:
+    except Exception:  # catch OSError, AttributeError, etc. from C extensions
         return False
 
 

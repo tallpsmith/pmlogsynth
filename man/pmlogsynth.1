@@ -208,6 +208,14 @@ or an integer count.
 repeats the phase once per 24-hour period within
 .IR meta.duration .
 Integer repeats the phase exactly N times.
+.RS
+.B WARNING:
+.I repeat: daily
+cannot be combined with other phases.
+A profile containing a
+.I repeat: daily
+phase alongside any other phase is a validation error.
+.RE
 .TP
 .BR cpu ", " memory ", " disk ", " network
 Domain-specific stressor blocks (all fields optional).
@@ -396,6 +404,7 @@ is set).
 .I ~/.pcp/pmlogsynth/profiles/
 User-defined hardware profiles directory.
 .SH SEE ALSO
+.BR pcp (1),
 .BR pmlogcheck (1),
 .BR pmval (1),
 .BR pmrep (1),

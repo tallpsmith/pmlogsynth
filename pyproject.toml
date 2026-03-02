@@ -23,6 +23,9 @@ include = ["pmlogsynth*"]
 [tool.setuptools.package-data]
 pmlogsynth = ["profiles/*.yaml"]
 
+[tool.setuptools]
+data-files = [("share/man/man1", ["man/pmlogsynth.1"])]
+
 [tool.ruff]
 target-version = "py38"
 line-length = 100

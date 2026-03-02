@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+echo "=== man page check ==="
+man ./man/pmlogsynth.1 || exit 1
+
 echo "=== ruff check ==="
 ruff check .
 

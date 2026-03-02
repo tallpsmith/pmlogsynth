@@ -148,27 +148,6 @@ Full CLI reference — `man pmlogsynth`.
 
 ---
 
-## Running Tests
-
-PCP's Python bindings (`cpmapi`) are required for **all** test tiers — the package
-imports PCP constants at module level.  See [Installation](#installation) for setup.
-
-```bash
-# Unit tests
-pytest tests/unit/ -v
-
-# Unit + integration tests
-pytest tests/unit/ tests/integration/ -v
-
-# All tiers (E2E needs pcp.pmi for archive writing)
-pytest -v
-
-# Full local quality gate (lint + types + all tiers)
-./pre-commit.sh
-```
-
----
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, test structure, and PR conventions.

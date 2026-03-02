@@ -215,7 +215,7 @@ def test_metric_descriptors_pmids():
 def test_metric_descriptors_semantics():
     """mem.physmem must be PM_SEM_DISCRETE; util metrics must be PM_SEM_INSTANT."""
     _PM_SEM_INSTANT = 3
-    _PM_SEM_DISCRETE = 2
+    _PM_SEM_DISCRETE = 4
     hw = make_hw()
     model = make_model()
     descriptors = model.metric_descriptors(hw)

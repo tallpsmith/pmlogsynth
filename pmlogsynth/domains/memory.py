@@ -6,10 +6,10 @@ from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.profile import HardwareProfile, MemoryStressor
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_U64 = 8
+_PM_TYPE_U64 = 3
 _PM_SEM_INSTANT = 3
-_PM_SEM_DISCRETE = 2
-_PM_SPACE_KBYTE = 2
+_PM_SEM_DISCRETE = 4
+_PM_SPACE_KBYTE = 1
 _UNITS_KBYTE = (1, 0, 0, _PM_SPACE_KBYTE, 0, 0)
 
 _DEFAULT_USED_RATIO = 0.50

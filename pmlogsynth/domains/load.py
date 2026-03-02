@@ -7,7 +7,7 @@ from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_FLOAT = 5
+_PM_TYPE_FLOAT = 4
 _PM_SEM_INSTANT = 3
 _LOAD_INDOM = (60, 3)
 _UNITS_NONE = (0, 0, 0, 0, 0, 0)

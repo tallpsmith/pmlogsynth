@@ -16,8 +16,8 @@ ai  = ["anthropic>=0.20.0"]
 [project.scripts]
 pmlogsynth = "pmlogsynth.cli:main"
 
-[tool.setuptools]
-data-files = [["share/man/man1", ["man/pmlogsynth.1"]]]
+[tool.setuptools.data-files]
+"share/man/man1" = ["man/pmlogsynth.1"]
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -20,6 +20,7 @@ pmlogsynth/                 # installable Python package
 ├── profile.py              # ProfileLoader (from_file + from_string) + ProfileResolver
 ├── timeline.py             # phase sequencer, linear interpolation, repeat expansion
 ├── sampler.py              # ValueSampler: noise, counter accumulation
+├── pcp_constants.py        # centralised PCP type/sem/unit constants (imports from cpmapi when available)
 ├── writer.py               # pcp.pmi.pmiLogImport wrapper (isolated PCP dependency)
 ├── profiles/               # bundled hardware profile YAML files (7 profiles)
 └── domains/
@@ -64,7 +65,10 @@ pmlogsynth --list-metrics
 
 ## Key Invariants
 
-- **PCP library isolated in `writer.py`**: Tier 1 and Tier 2 MUST NOT import from `pcp.*`
+- **PCP is a hard dependency**: `python3-pcp` must be installed.
+  `pcp_constants.py` imports type/sem/unit constants directly from `cpmapi`.
+  Domain modules and tests import from `pcp_constants`, never from `cpmapi` directly.
+- **PCP archive writing isolated in `writer.py`**: only `writer.py` imports `pcp.pmi`
 - **Stressor defaults applied at compute time**: `MetricModel.compute()` applies defaults,
   NOT `ProfileLoader`. Parsed stressor fields are `Optional` — `None` ≠ default value.
 - **Counter increments clamped ≥ 0**: noise must never produce negative counter deltas

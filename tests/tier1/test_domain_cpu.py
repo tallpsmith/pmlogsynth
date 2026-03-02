@@ -4,6 +4,7 @@ No PCP imports — pure Python only.
 """
 
 from pmlogsynth.domains.cpu import CpuMetricModel
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_MSEC
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
@@ -99,21 +100,20 @@ def test_descriptor_pmids() -> None:
 
 
 def test_descriptor_type_and_sem() -> None:
-    """All metrics must be PM_TYPE_U64 (8) and PM_SEM_COUNTER (1)."""
+    """All metrics must be PM_TYPE_U64 and PM_SEM_COUNTER."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     for d in model.metric_descriptors(hw):
-        assert d.type_code == 8, "Expected PM_TYPE_U64=8"
-        assert d.sem == 1, "Expected PM_SEM_COUNTER=1"
+        assert d.type_code == PM_TYPE_U64, "Expected PM_TYPE_U64"
+        assert d.sem == PM_SEM_COUNTER, "Expected PM_SEM_COUNTER"
 
 
 def test_descriptor_units_msec() -> None:
     """All metrics must have millisecond time units tuple."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
-    expected_units = (0, 1, 0, 0, 4, 0)
     for d in model.metric_descriptors(hw):
-        assert d.units == expected_units, f"{d.name}: unexpected units {d.units}"
+        assert d.units == UNITS_MSEC, f"{d.name}: unexpected units {d.units}"
 
 
 # ---------------------------------------------------------------------------

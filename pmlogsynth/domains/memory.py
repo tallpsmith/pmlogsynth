@@ -3,14 +3,14 @@
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
+from pmlogsynth.pcp_constants import (
+    PM_SEM_DISCRETE,
+    PM_SEM_INSTANT,
+    PM_TYPE_U64,
+    UNITS_KBYTE,
+)
 from pmlogsynth.profile import HardwareProfile, MemoryStressor
 from pmlogsynth.sampler import ValueSampler
-
-_PM_TYPE_U64 = 8
-_PM_SEM_INSTANT = 3
-_PM_SEM_DISCRETE = 2
-_PM_SPACE_KBYTE = 2
-_UNITS_KBYTE = (1, 0, 0, _PM_SPACE_KBYTE, 0, 0)
 
 _DEFAULT_USED_RATIO = 0.50
 _DEFAULT_CACHE_RATIO = 0.30
@@ -25,42 +25,42 @@ class MemoryMetricModel(MetricModel):
             MetricDescriptor(
                 name="mem.util.used",
                 pmid=(58, 0, 6),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_INSTANT,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_INSTANT,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="mem.util.free",
                 pmid=(58, 0, 2),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_INSTANT,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_INSTANT,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="mem.util.cached",
                 pmid=(58, 0, 13),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_INSTANT,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_INSTANT,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="mem.util.bufmem",
                 pmid=(58, 0, 4),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_INSTANT,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_INSTANT,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="mem.physmem",
                 pmid=(58, 0, 0),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_DISCRETE,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_DISCRETE,
+                units=UNITS_KBYTE,
             ),
         ]
 

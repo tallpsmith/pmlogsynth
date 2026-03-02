@@ -4,13 +4,11 @@ import math
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
+from pmlogsynth.pcp_constants import PM_SEM_INSTANT, PM_TYPE_FLOAT, UNITS_NONE
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_FLOAT = 5
-_PM_SEM_INSTANT = 3
 _LOAD_INDOM = (60, 3)
-_UNITS_NONE = (0, 0, 0, 0, 0, 0)
 
 _DEFAULT_UTILIZATION = 0.0
 
@@ -28,10 +26,10 @@ class LoadMetricModel(MetricModel):
             MetricDescriptor(
                 name="kernel.all.load",
                 pmid=(60, 2, 0),
-                type_code=_PM_TYPE_FLOAT,
+                type_code=PM_TYPE_FLOAT,
                 indom=_LOAD_INDOM,
-                sem=_PM_SEM_INSTANT,
-                units=_UNITS_NONE,
+                sem=PM_SEM_INSTANT,
+                units=UNITS_NONE,
             ),
         ]
 

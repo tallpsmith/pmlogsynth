@@ -3,15 +3,9 @@
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_MSEC
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
-
-# PCP constant values (no pcp.pmi import — Tier 1/2 isolation)
-_PM_TYPE_U64 = 8
-_PM_SEM_COUNTER = 1
-_PM_TIME_MSEC = 4
-# units tuple: (dimSpace, dimTime, dimCount, scaleSpace, scaleTime, scaleCount)
-_UNITS_MSEC = (0, 1, 0, 0, _PM_TIME_MSEC, 0)
 
 # CPU indom serial
 _CPU_INDOM_SERIAL = 0
@@ -34,67 +28,67 @@ class CpuMetricModel(MetricModel):
             MetricDescriptor(
                 name="kernel.all.cpu.user",
                 pmid=(60, 0, 20),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.sys",
                 pmid=(60, 0, 22),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.idle",
                 pmid=(60, 0, 21),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.wait.total",
                 pmid=(60, 0, 35),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.steal",
                 pmid=(60, 0, 58),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             # Per-CPU metrics
             MetricDescriptor(
                 name="kernel.percpu.cpu.user",
                 pmid=(60, 10, 20),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=cpu_indom,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.percpu.cpu.sys",
                 pmid=(60, 10, 22),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=cpu_indom,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
             MetricDescriptor(
                 name="kernel.percpu.cpu.idle",
                 pmid=(60, 10, 21),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=cpu_indom,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_MSEC,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
             ),
         ]
         return descriptors

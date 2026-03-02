@@ -5,6 +5,7 @@ import math
 import pytest
 
 from pmlogsynth.domains.load import LoadMetricModel
+from pmlogsynth.pcp_constants import PM_SEM_INSTANT, PM_TYPE_FLOAT
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler  # noqa: F401 (used in fixtures)
 
@@ -52,8 +53,8 @@ def test_metric_descriptors_pmid(hw4: HardwareProfile) -> None:
 def test_metric_descriptors_type_and_sem(hw4: HardwareProfile) -> None:
     model = LoadMetricModel()
     descriptor = model.metric_descriptors(hw4)[0]
-    assert descriptor.type_code == 5   # PM_TYPE_FLOAT
-    assert descriptor.sem == 3         # PM_SEM_INSTANT
+    assert descriptor.type_code == PM_TYPE_FLOAT
+    assert descriptor.sem == PM_SEM_INSTANT
 
 
 def test_metric_descriptors_indom(hw4: HardwareProfile) -> None:

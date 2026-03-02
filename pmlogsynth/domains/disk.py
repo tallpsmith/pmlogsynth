@@ -3,13 +3,10 @@
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_COUNT, UNITS_KBYTE
 from pmlogsynth.profile import DiskStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_U64 = 8
-_PM_SEM_COUNTER = 1
-_UNITS_KBYTE = (1, 0, 0, 2, 0, 0)
-_UNITS_COUNT = (0, 0, 1, 0, 0, 0)
 _DISK_INDOM = (60, 1)
 
 _DEFAULT_READ_MBPS = 0.0
@@ -26,50 +23,50 @@ class DiskMetricModel(MetricModel):
             MetricDescriptor(
                 name="disk.all.read",
                 pmid=(60, 4, 0),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_COUNT,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_COUNT,
             ),
             MetricDescriptor(
                 name="disk.all.write",
                 pmid=(60, 4, 1),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_COUNT,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_COUNT,
             ),
             MetricDescriptor(
                 name="disk.all.read_bytes",
                 pmid=(60, 4, 5),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="disk.all.write_bytes",
                 pmid=(60, 4, 6),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=None,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="disk.dev.read_bytes",
                 pmid=(60, 5, 5),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_KBYTE,
             ),
             MetricDescriptor(
                 name="disk.dev.write_bytes",
                 pmid=(60, 5, 6),
-                type_code=_PM_TYPE_U64,
+                type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
-                sem=_PM_SEM_COUNTER,
-                units=_UNITS_KBYTE,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_KBYTE,
             ),
         ]
         return descriptors

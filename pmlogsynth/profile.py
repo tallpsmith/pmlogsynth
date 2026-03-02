@@ -343,6 +343,16 @@ def _validate_profile(profile: "WorkloadProfile") -> None:
     phases = profile.phases
     meta = profile.meta
 
+    # repeat:daily expansion auto-fills each day to exactly 86400s, leaving no room
+    # for other explicit phases — the expanded total would exceed meta.duration.
+    daily_phases = [p for p in phases if p.repeat == "daily"]
+    if daily_phases and len(phases) > 1:
+        raise ValidationError(
+            f"A phase with repeat:daily must be the only phase in the profile "
+            f"(found {len(phases)} phases). Other phases cause duration overflow "
+            f"because repeat:daily auto-fills the remainder of each day."
+        )
+
     # FR-055: first phase cannot use transition: linear
     if phases[0].transition == "linear":
         raise ValidationError(

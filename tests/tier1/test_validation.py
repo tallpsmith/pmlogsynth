@@ -120,20 +120,37 @@ phases:
 
 @pytest.mark.tier1
 def test_repeat_daily_overflow_raises_fr031() -> None:
-    """repeat:daily phase with duration > meta.duration raises ValidationError (FR-031)."""
+    """repeat:daily sole phase with duration > meta.duration raises ValidationError (FR-031)."""
     yaml_text = """
 meta:
   duration: 3600
 host:
   profile: test-single-cpu
 phases:
-  - name: background
-    duration: 3600
   - name: noon-peak
     duration: 7200
     repeat: daily
 """
     with pytest.raises(ValidationError, match="FR-031"):
+        _load_str(yaml_text)
+
+
+@pytest.mark.tier1
+def test_repeat_daily_with_other_phases_raises() -> None:
+    """repeat:daily phase cannot coexist with other explicit phases (duration overflow)."""
+    yaml_text = """
+meta:
+  duration: 259200
+host:
+  profile: test-single-cpu
+phases:
+  - name: background
+    duration: 3600
+  - name: noon-peak
+    duration: 3600
+    repeat: daily
+"""
+    with pytest.raises(ValidationError, match="repeat:daily"):
         _load_str(yaml_text)
 
 

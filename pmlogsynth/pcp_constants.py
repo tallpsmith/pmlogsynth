@@ -26,21 +26,15 @@ PM_SEM_DISCRETE: int = _c.PM_SEM_DISCRETE
 PM_SEM_INSTANT: int = _c.PM_SEM_INSTANT
 
 # ------------------------------------------------------------------
-# Dimension scales  (PM_SPACE_*, PM_TIME_*)
-# ------------------------------------------------------------------
-PM_SPACE_BYTE: int = _c.PM_SPACE_BYTE
-PM_SPACE_KBYTE: int = _c.PM_SPACE_KBYTE
-PM_TIME_MSEC: int = _c.PM_TIME_MSEC
-
-# ------------------------------------------------------------------
 # Pre-built unit tuples  (dimSpace, dimTime, dimCount,
 #                          scaleSpace, scaleTime, scaleCount)
 # These are the argument vectors passed to pmi.pmiUnits().
+# Derived from cpmapi's native scale constants (PM_SPACE_*, PM_TIME_*).
 # ------------------------------------------------------------------
 _Units = Tuple[int, int, int, int, int, int]
 
 UNITS_NONE: _Units = (0, 0, 0, 0, 0, 0)
 UNITS_COUNT: _Units = (0, 0, 1, 0, 0, 0)
-UNITS_MSEC: _Units = (0, 1, 0, 0, PM_TIME_MSEC, 0)
-UNITS_BYTES: _Units = (1, 0, 0, PM_SPACE_BYTE, 0, 0)
-UNITS_KBYTE: _Units = (1, 0, 0, PM_SPACE_KBYTE, 0, 0)
+UNITS_MSEC: _Units = (0, 1, 0, 0, _c.PM_TIME_MSEC, 0)
+UNITS_BYTES: _Units = (1, 0, 0, _c.PM_SPACE_BYTE, 0, 0)
+UNITS_KBYTE: _Units = (1, 0, 0, _c.PM_SPACE_KBYTE, 0, 0)

@@ -102,7 +102,7 @@ phases:
       utilization: 0.10
 ```
 
-This produces: `ValidationError: repeat:daily phase cannot coexist with other phases`
+This produces: `Validation error: A phase with repeat:daily must be the only phase in the profile`
 
 **Valid — use repeat: daily alone:**
 

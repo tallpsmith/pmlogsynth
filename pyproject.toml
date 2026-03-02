@@ -16,15 +16,15 @@ ai  = ["anthropic>=0.20.0"]
 [project.scripts]
 pmlogsynth = "pmlogsynth.cli:main"
 
+[tool.setuptools]
+data-files = [["share/man/man1", ["man/pmlogsynth.1"]]]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pmlogsynth*"]
 
 [tool.setuptools.package-data]
 pmlogsynth = ["profiles/*.yaml"]
-
-[tool.setuptools]
-data-files = [("share/man/man1", ["man/pmlogsynth.1"])]
 
 [tool.ruff]
 target-version = "py38"

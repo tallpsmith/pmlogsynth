@@ -10,16 +10,22 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "tier3: E2E tests, real PCP library required")
 
 
-@pytest.fixture(scope="session")
-def pcp_available() -> bool:
-    """Skip test if pcp.pmi is not importable (Tier 3 guard)."""
+def _pcp_importable() -> bool:
+    """Return True if pcp.pmi can be imported."""
     try:
         import pcp.pmi  # noqa: F401
 
         return True
     except ImportError:
-        pytest.skip(
-            "WARNING: PCP library not available — E2E tests skipped",
-            allow_module_level=False,
-        )
-        return False  # unreachable; satisfies type checker
+        return False
+
+
+_PCP_AVAILABLE = _pcp_importable()
+
+
+@pytest.fixture(scope="session")
+def pcp_available() -> bool:
+    """Skip test if pcp.pmi is not importable (Tier 3 guard)."""
+    if not _PCP_AVAILABLE:
+        pytest.skip("WARNING: PCP library not available — E2E tests skipped")
+    return True

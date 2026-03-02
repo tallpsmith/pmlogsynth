@@ -126,7 +126,7 @@ Archive timezone string (default:
 Total archive duration in seconds (required, positive integer).
 .TP
 .B interval
-Sample interval in seconds (default: 60).
+Sample interval in seconds (required positive integer, default: 60).
 .TP
 .B noise
 Global multiplicative Gaussian noise level, range [0.0, 1.0] (default: 0.0).
@@ -187,6 +187,10 @@ Phase identifier string (required).
 .TP
 .B duration
 Phase duration in seconds (required, positive integer).
+When no phase uses
+.BR repeat ,
+the sum of all phase durations must equal
+.IR meta.duration .
 .TP
 .B transition
 .I instant
@@ -214,7 +218,7 @@ Overall CPU utilization fraction [0.0, 1.0] (default 0.0 at compute time).
 .TP
 .BR user_ratio ", " sys_ratio ", " iowait_ratio
 Fractions of utilization allocated to each CPU state.
-Sum must not exceed 1.0 (FR-026).
+Sum must not exceed 1.0.
 Defaults: 0.70 / 0.20 / 0.10.
 .TP
 .B noise
@@ -339,42 +343,6 @@ Per-interface receive/transmit packet counts (cumulative counter).
 Instance names match
 .I interface.name
 fields in the hardware profile.
-.SH CONSTRAINTS
-The following profile constraints are enforced at validation time:
-.TP
-.B FR-015a
-Mixing inline host fields with
-.B profile:
-without an
-.B overrides:
-key is invalid.
-.TP
-.B FR-026
-.IR user_ratio " + " sys_ratio " + " iowait_ratio " must not exceed 1.0."
-.TP
-.B FR-027
-Sum of phase durations must equal
-.I meta.duration
-(when no
-.B repeat
-key is present).
-.TP
-.B FR-029
-.I meta.noise
-must be in [0.0, 1.0].
-.TP
-.B FR-030
-.I meta.interval
-must be a positive integer.
-.TP
-.B FR-031
-.I repeat: daily
-phase duration must fit within
-.IR meta.duration .
-.TP
-.B FR-055
-The first phase cannot use
-.IR "transition: linear" .
 .SH EXAMPLES
 .SS Generate a 10-minute archive with a CPU spike
 .PP

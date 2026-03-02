@@ -99,11 +99,11 @@ def test_descriptor_pmids() -> None:
 
 
 def test_descriptor_type_and_sem() -> None:
-    """All metrics must be PM_TYPE_U64 (8) and PM_SEM_COUNTER (1)."""
+    """All metrics must be PM_TYPE_U64 (3) and PM_SEM_COUNTER (1)."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     for d in model.metric_descriptors(hw):
-        assert d.type_code == 8, "Expected PM_TYPE_U64=8"
+        assert d.type_code == 3, "Expected PM_TYPE_U64=3"
         assert d.sem == 1, "Expected PM_SEM_COUNTER=1"
 
 
@@ -111,7 +111,7 @@ def test_descriptor_units_msec() -> None:
     """All metrics must have millisecond time units tuple."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
-    expected_units = (0, 1, 0, 0, 4, 0)
+    expected_units = (0, 1, 0, 0, 2, 0)
     for d in model.metric_descriptors(hw):
         assert d.units == expected_units, f"{d.name}: unexpected units {d.units}"
 

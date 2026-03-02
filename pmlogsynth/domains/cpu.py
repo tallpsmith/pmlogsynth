@@ -7,9 +7,9 @@ from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
 # PCP constant values (no pcp.pmi import — Tier 1/2 isolation)
-_PM_TYPE_U64 = 8
+_PM_TYPE_U64 = 3
 _PM_SEM_COUNTER = 1
-_PM_TIME_MSEC = 4
+_PM_TIME_MSEC = 2
 # units tuple: (dimSpace, dimTime, dimCount, scaleSpace, scaleTime, scaleCount)
 _UNITS_MSEC = (0, 1, 0, 0, _PM_TIME_MSEC, 0)
 

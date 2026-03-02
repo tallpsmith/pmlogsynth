@@ -52,7 +52,7 @@ def test_metric_descriptors_pmid(hw4: HardwareProfile) -> None:
 def test_metric_descriptors_type_and_sem(hw4: HardwareProfile) -> None:
     model = LoadMetricModel()
     descriptor = model.metric_descriptors(hw4)[0]
-    assert descriptor.type_code == 5   # PM_TYPE_FLOAT
+    assert descriptor.type_code == 4   # PM_TYPE_FLOAT
     assert descriptor.sem == 3         # PM_SEM_INSTANT
 
 

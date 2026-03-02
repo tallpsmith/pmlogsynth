@@ -6,7 +6,7 @@ from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.profile import HardwareProfile, NetworkStressor
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_U64 = 8
+_PM_TYPE_U64 = 3
 _PM_SEM_COUNTER = 1
 _UNITS_BYTES = (1, 0, 0, 0, 0, 0)
 _UNITS_COUNT = (0, 0, 1, 0, 0, 0)

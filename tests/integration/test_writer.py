@@ -62,12 +62,12 @@ def test_writer_registers_metrics(tmp_path: Path) -> None:
     output = str(tmp_path / "out")
 
     mock_log = MagicMock()
-    with patch("pmlogsynth.writer.pmi") as mock_pmi:
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
         mock_pmi.pmiLogImport.return_value = mock_log
-        mock_pmi.PM_INDOM_NULL = None
-        mock_pmi.pmiID.side_effect = lambda d, c, i: (d, c, i)
-        mock_pmi.pmiInDom.side_effect = lambda d, s: (d, s)
-        mock_pmi.pmiUnits.side_effect = lambda *a: a
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
 
         from pmlogsynth.writer import ArchiveWriter
 
@@ -95,12 +95,12 @@ def test_writer_registers_instances(tmp_path: Path) -> None:
     output = str(tmp_path / "out")
 
     mock_log = MagicMock()
-    with patch("pmlogsynth.writer.pmi") as mock_pmi:
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
         mock_pmi.pmiLogImport.return_value = mock_log
-        mock_pmi.PM_INDOM_NULL = None
-        mock_pmi.pmiID.side_effect = lambda d, c, i: (d, c, i)
-        mock_pmi.pmiInDom.side_effect = lambda d, s: (d, s)
-        mock_pmi.pmiUnits.side_effect = lambda *a: a
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
 
         from pmlogsynth.writer import ArchiveWriter
 
@@ -125,12 +125,12 @@ def test_writer_calls_pmiwrite_per_sample(tmp_path: Path) -> None:
     output = str(tmp_path / "out")
 
     mock_log = MagicMock()
-    with patch("pmlogsynth.writer.pmi") as mock_pmi:
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
         mock_pmi.pmiLogImport.return_value = mock_log
-        mock_pmi.PM_INDOM_NULL = None
-        mock_pmi.pmiID.side_effect = lambda d, c, i: (d, c, i)
-        mock_pmi.pmiInDom.side_effect = lambda d, s: (d, s)
-        mock_pmi.pmiUnits.side_effect = lambda *a: a
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
 
         from pmlogsynth.writer import ArchiveWriter
 
@@ -150,12 +150,12 @@ def test_writer_sets_hostname_and_timezone(tmp_path: Path) -> None:
     output = str(tmp_path / "out")
 
     mock_log = MagicMock()
-    with patch("pmlogsynth.writer.pmi") as mock_pmi:
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
         mock_pmi.pmiLogImport.return_value = mock_log
-        mock_pmi.PM_INDOM_NULL = None
-        mock_pmi.pmiID.side_effect = lambda d, c, i: (d, c, i)
-        mock_pmi.pmiInDom.side_effect = lambda d, s: (d, s)
-        mock_pmi.pmiUnits.side_effect = lambda *a: a
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
 
         from pmlogsynth.writer import ArchiveWriter
 
@@ -198,12 +198,12 @@ def test_writer_force_overwrites(tmp_path: Path) -> None:
     (tmp_path / "out.0").write_text("existing")
 
     mock_log = MagicMock()
-    with patch("pmlogsynth.writer.pmi") as mock_pmi:
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
         mock_pmi.pmiLogImport.return_value = mock_log
-        mock_pmi.PM_INDOM_NULL = None
-        mock_pmi.pmiID.side_effect = lambda d, c, i: (d, c, i)
-        mock_pmi.pmiInDom.side_effect = lambda d, s: (d, s)
-        mock_pmi.pmiUnits.side_effect = lambda *a: a
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
 
         from pmlogsynth.writer import ArchiveWriter
 

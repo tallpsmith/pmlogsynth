@@ -19,9 +19,11 @@ from pmlogsynth.sampler import ValueSampler
 from pmlogsynth.timeline import ExpandedTimeline
 
 try:
+    from cpmapi import PM_INDOM_NULL
     from pcp import pmi  # noqa: F401
 except ImportError:
     pmi = None
+    PM_INDOM_NULL = 0xFFFFFFFF
 
 
 class ArchiveConflictError(Exception):
@@ -96,15 +98,15 @@ class ArchiveWriter:
 
             registered_indoms = set()
             for desc in all_descriptors:
-                pmid = pmi.pmiID(*desc.pmid)
+                pmid = log.pmiID(*desc.pmid)
                 if desc.indom is not None:
                     indom_key = desc.indom
                     if indom_key not in registered_indoms:
                         registered_indoms.add(indom_key)
-                    indom_obj = pmi.pmiInDom(*desc.indom)
+                    indom_obj = log.pmiInDom(*desc.indom)
                 else:
-                    indom_obj = pmi.PM_INDOM_NULL
-                units_obj = pmi.pmiUnits(*desc.units)
+                    indom_obj = PM_INDOM_NULL
+                units_obj = log.pmiUnits(*desc.units)
                 log.pmiAddMetric(desc.name, pmid, desc.type_code, indom_obj, desc.sem, units_obj)
 
             # Register instances for instanced metrics
@@ -169,21 +171,21 @@ class ArchiveWriter:
         hw = self._hardware
 
         # Per-CPU
-        cpu_indom = pmi.pmiInDom(60, 0)
+        cpu_indom = log.pmiInDom(60, 0)
         for i in range(hw.cpus):
-            log.pmiAddInstance(cpu_indom, f"cpu{i}", i)
+            log.pmiAddInstance(cpu_indom, "cpu{}".format(i), i)
 
         # Per-disk
-        disk_indom = pmi.pmiInDom(60, 1)
+        disk_indom = log.pmiInDom(60, 1)
         for idx, disk in enumerate(hw.disks):
             log.pmiAddInstance(disk_indom, disk.name, idx)
 
         # Per-NIC
-        net_indom = pmi.pmiInDom(60, 2)
+        net_indom = log.pmiInDom(60, 2)
         for idx, iface in enumerate(hw.interfaces):
             log.pmiAddInstance(net_indom, iface.name, idx)
 
         # Load average instances
-        load_indom = pmi.pmiInDom(60, 3)
+        load_indom = log.pmiInDom(60, 3)
         for idx, label in enumerate(["1 minute", "5 minute", "15 minute"]):
             log.pmiAddInstance(load_indom, label, idx)

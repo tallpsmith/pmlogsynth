@@ -6,9 +6,9 @@ from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.profile import DiskStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
-_PM_TYPE_U64 = 8
+_PM_TYPE_U64 = 3
 _PM_SEM_COUNTER = 1
-_UNITS_KBYTE = (1, 0, 0, 2, 0, 0)
+_UNITS_KBYTE = (1, 0, 0, 1, 0, 0)
 _UNITS_COUNT = (0, 0, 1, 0, 0, 0)
 _DISK_INDOM = (60, 1)
 

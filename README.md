@@ -71,14 +71,23 @@ phases:
       utilization: 0.90
 ```
 
-### 2. Generate the archive
+### 2. Validate your profile
+
+```bash
+pmlogsynth --validate spike.yaml
+# Exit 0 = valid, Exit 1 = error (stderr shows what's wrong)
+```
+
+> **Note**: `repeat: daily` cannot be combined with other phases — validation will reject it.
+
+### 3. Generate the archive
 
 ```bash
 pmlogsynth -o ./out spike.yaml
 # Creates: out.0  out.index  out.meta
 ```
 
-### 3. Verify with PCP tools
+### 4. Verify with PCP tools
 
 ```bash
 pmlogcheck ./out
@@ -86,12 +95,11 @@ pmval -a ./out kernel.all.cpu.user
 pmrep -a ./out -o csv kernel.all.cpu.user mem.util.used
 ```
 
-### 4. Explore available options
+### 5. Explore available options
 
 ```bash
 pmlogsynth --list-profiles   # show hardware profiles
 pmlogsynth --list-metrics    # show all producible PCP metrics
-pmlogsynth --validate spike.yaml && echo valid
 ```
 
 ---
@@ -113,19 +121,38 @@ Use `host.profile: <name>` in your profile, or add your own profiles to
 
 ---
 
+## Profile Format
+
+Full YAML schema documentation — all fields, types, defaults, valid ranges,
+and constraints — is in [`docs/profile-format.md`](docs/profile-format.md).
+
+---
+
+## Metrics
+
+24 PCP metrics — `pmlogsynth --list-metrics` or `man pmlogsynth`.
+
+---
+
+## CLI Reference
+
+Full CLI reference — `man pmlogsynth`.
+
+---
+
 ## Running Tests
 
 ```bash
-# Tier 1: unit tests (no PCP needed)
-pytest tests/tier1/ -v
+# Unit tests (no PCP needed)
+pytest tests/unit/ -v
 
-# Tier 1 + Tier 2: all non-E2E tests (PCP mocked)
-pytest tests/tier1/ tests/tier2/ -v
+# Unit + integration tests (PCP mocked)
+pytest tests/unit/ tests/integration/ -v
 
-# All tiers (Tier 3 auto-skipped if pcp.pmi unavailable)
+# All tiers (E2E auto-skipped if pcp.pmi unavailable)
 pytest -v
 
-# Run the full local quality gate (lint + types + Tier 1 + Tier 2)
+# Full local quality gate (lint + types + unit + integration)
 ./pre-commit.sh
 ```
 
@@ -133,5 +160,4 @@ pytest -v
 
 ## Contributing
 
-Issues and pull requests welcome at
-[github.com/tallpsmith/pmlogsynth](https://github.com/tallpsmith/pmlogsynth).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, test structure, and PR conventions.

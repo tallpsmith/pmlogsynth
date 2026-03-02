@@ -14,12 +14,11 @@ def test_pcp_library_available(pcp_available: bool) -> None:
 
 
 @pytest.mark.tier3
-def test_pcp_pmi_diagnostics(pcp_available: bool) -> None:
-    """Log available pcp.pmi attributes for diagnostic purposes; always passes."""
+def test_pcp_pmi_import(pcp_available: bool) -> None:
+    """Verify pcp.pmi has the pmiLogImport class needed by ArchiveWriter."""
     import pcp.pmi as pmi
 
     attrs = [a for a in dir(pmi) if not a.startswith("_")]
-    # Print for CI log visibility
-    print(f"\npcp.pmi public attributes: {attrs}")
-    # Just verify the module loaded — attribute inspection is informational only
-    assert isinstance(attrs, list)
+    assert hasattr(pmi, "pmiLogImport"), (
+        "pmiLogImport not found in pcp.pmi; available: %s" % attrs
+    )

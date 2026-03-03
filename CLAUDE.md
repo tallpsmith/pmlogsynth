@@ -160,4 +160,20 @@ See `docs/pcp-tools.md` for the full PCP toolkit reference and validation workfl
 
 **Invariant**: the inline YAML block in `README.md` Quick Start (step 1) must always
 match `docs/spike.yml` exactly. If one changes, update the other.
+
+## Developer Experience Docs — MANDATORY
+
+**`man/pmlogsynth.1`, `README.md`, and `CONTRIBUTING.md` form the developer experience
+triad.** Before completing any feature or bug fix, ask: "Does this touch the CLI surface,
+user workflow, or contributor setup?" If yes, update all three as needed:
+
+- **`man/pmlogsynth.1`** — CLI flags, subcommands, YAML schema, exit codes, file paths
+- **`README.md`** — Quick Start steps, bundled hardware profiles table, metrics count,
+  any new user-facing capabilities (AI tools, new flags, new output files)
+- **`CONTRIBUTING.md`** — dev setup steps, test tier table, PR conventions
+
+New user-facing tools (e.g. Claude skills, new informational flags) must appear in
+`README.md`. New dev workflow requirements (e.g. new quality gate steps) must appear in
+`CONTRIBUTING.md`. The man page covers the authoritative CLI reference; README covers
+the getting-started narrative; CONTRIBUTING covers the contributor workflow.
 <!-- MANUAL ADDITIONS END -->

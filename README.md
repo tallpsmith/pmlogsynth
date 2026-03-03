@@ -109,7 +109,20 @@ pmrep -a ./generated-archives/spike -o csv kernel.all.cpu.user mem.util.used
 ```bash
 pmlogsynth --list-profiles   # show hardware profiles
 pmlogsynth --list-metrics    # show all producible PCP metrics
+pmlogsynth --show-schema     # dump the full profile schema (for AI agents)
 ```
+
+### 6. Generate a profile with AI
+
+If you're using [Claude Code](https://claude.ai/claude-code), the `/generate-profile`
+skill can turn a plain-English description into a valid YAML profile:
+
+```
+/generate-profile a 1-hour archive of a memory-constrained host under heavy disk I/O
+```
+
+The skill feeds `--show-schema` output to the model as context, so the generated profile
+is always valid against the current schema.
 
 ---
 

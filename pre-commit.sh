@@ -2,6 +2,14 @@
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
+# Auto-activate the project venv if one exists and nothing is currently active.
+# This means `./pre-commit.sh` works straight after `./setup-venv.sh` without
+# a separate `source .venv/bin/activate` step.
+if [ -z "$VIRTUAL_ENV" ] && [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/.venv/bin/activate"
+fi
+
 QUIET=false
 [[ "${1:-}" == "-q" ]] && QUIET=true
 

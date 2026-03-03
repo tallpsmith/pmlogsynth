@@ -44,19 +44,41 @@ def make_uname_stub(directory: Path) -> None:
     stub.chmod(0o755)
 
 
-def run_script(env: dict, args: list = None) -> subprocess.CompletedProcess:
-    cmd = ["/bin/bash", str(SCRIPT)] + (args or [])
+def run_script(env: dict, args: list = None, script: Path = None) -> subprocess.CompletedProcess:
+    cmd = ["/bin/bash", str(script or SCRIPT)] + (args or [])
     return subprocess.run(cmd, env=env, capture_output=True, text=True)
+
+
+def make_script_copy(tmp_path: Path) -> Path:
+    """
+    Copy pre-commit.sh into tmp_path so SCRIPT_DIR resolves to tmp_path.
+    tmp_path has no .venv, which prevents auto-activation — needed for tests
+    that want to exercise the 'no virtualenv active' error path.
+    """
+    copy = tmp_path / "pre-commit.sh"
+    copy.write_text(SCRIPT.read_text())
+    copy.chmod(0o755)
+    return copy
+
+
+def make_dirname_stub(directory: Path) -> None:
+    """Stub dirname using its absolute path so SCRIPT_DIR is always computed
+    correctly regardless of the restricted PATH used in tests."""
+    stub = directory / "dirname"
+    stub.write_text("#!/bin/bash\n/usr/bin/dirname \"$@\"\n")
+    stub.chmod(0o755)
 
 
 def base_env(tmp_path: Path) -> tuple:
     """
     Fully isolated env: PATH contains only bin_dir so no system binaries
-    (including pmpython) can leak in.  Provides python3 and uname stubs.
-    python3 stub defaults to both imports failing (all-missing scenario).
+    (including pmpython) can leak in.  Provides python3, uname, and dirname
+    stubs.  dirname is stubbed so SCRIPT_DIR resolves to the script's actual
+    directory rather than accidentally falling back to HOME.
     """
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    make_dirname_stub(bin_dir)
     make_python3_stub(bin_dir, cpmapi_ok=False, pcp_pmi_ok=False)
     make_uname_stub(bin_dir)
     env = {
@@ -67,46 +89,39 @@ def base_env(tmp_path: Path) -> tuple:
 
 
 class TestAllPrerequisitesMissing:
-    """No venv, no tools, no PCP — expect exit 1 with all 7 labels."""
+    """No venv, no tools, no PCP — expect exit 1 with all 7 labels.
+
+    Uses a script copy in tmp_path so SCRIPT_DIR has no .venv, which prevents
+    auto-activation and keeps the 'no virtualenv active' error path reachable.
+    """
+
+    def _run(self, tmp_path):
+        env, _ = base_env(tmp_path)
+        return run_script(env, script=make_script_copy(tmp_path))
 
     def test_exits_nonzero(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert result.returncode == 1
+        assert self._run(tmp_path).returncode == 1
 
     def test_prerequisite_check_failed_header(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "prerequisite check failed" in result.stdout
+        assert "prerequisite check failed" in self._run(tmp_path).stdout
 
     def test_no_virtualenv_label(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "no virtualenv active" in result.stdout
+        assert "no virtualenv active" in self._run(tmp_path).stdout
 
     def test_ruff_label(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "ruff not found" in result.stdout
+        assert "ruff not found" in self._run(tmp_path).stdout
 
     def test_mypy_label(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "mypy not found" in result.stdout
+        assert "mypy not found" in self._run(tmp_path).stdout
 
     def test_pytest_label(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "pytest not found" in result.stdout
+        assert "pytest not found" in self._run(tmp_path).stdout
 
     def test_pmpython_label(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
-        assert "pmpython not on PATH" in result.stdout
+        assert "pmpython not on PATH" in self._run(tmp_path).stdout
 
     def test_quality_gates_do_not_run(self, tmp_path):
-        env, _ = base_env(tmp_path)
-        result = run_script(env)
+        result = self._run(tmp_path)
         assert "ruff check" not in result.stdout
         assert "=== mypy ===" not in result.stdout
         assert "Unit + Integration" not in result.stdout
@@ -169,31 +184,64 @@ class TestCpmapiImportableButPcpPmiNot:
 
 
 class TestVenvAbsent:
-    """All tools present but no VIRTUAL_ENV — only venv label."""
+    """All tools present, no VIRTUAL_ENV, and no .venv dir — only venv label.
 
-    def _build_env(self, tmp_path):
+    Uses a script copy in tmp_path (no .venv present) so auto-activation is
+    bypassed and the 'no virtualenv active' error path remains reachable.
+    """
+
+    def _run(self, tmp_path):
         env, bin_dir = base_env(tmp_path)
         for tool in ("ruff", "mypy", "pytest", "pmpython"):
             make_stub(bin_dir, tool)
-        # python3 stub: both imports pass
         make_python3_stub(bin_dir, cpmapi_ok=True, pcp_pmi_ok=True)
-        # No VIRTUAL_ENV
-        return env
+        # No VIRTUAL_ENV, no .venv dir in tmp_path
+        return run_script(env, script=make_script_copy(tmp_path))
 
     def test_exits_nonzero(self, tmp_path):
-        result = run_script(self._build_env(tmp_path))
-        assert result.returncode == 1
+        assert self._run(tmp_path).returncode == 1
 
     def test_no_virtualenv_label(self, tmp_path):
-        result = run_script(self._build_env(tmp_path))
-        assert "no virtualenv active" in result.stdout
+        assert "no virtualenv active" in self._run(tmp_path).stdout
 
     def test_tool_labels_absent(self, tmp_path):
-        result = run_script(self._build_env(tmp_path))
+        result = self._run(tmp_path)
         assert "ruff not found" not in result.stdout
         assert "pmpython not on PATH" not in result.stdout
         assert "cpmapi not importable" not in result.stdout
         assert "pcp.pmi not importable" not in result.stdout
+
+
+class TestAutoActivation:
+    """When .venv/bin/activate exists and no VIRTUAL_ENV is set, pre-commit
+    should auto-source the venv — no manual activation step required."""
+
+    def _run(self, tmp_path):
+        env, bin_dir = base_env(tmp_path)
+        for tool in ("ruff", "mypy", "pytest", "pmpython"):
+            make_stub(bin_dir, tool)
+        make_python3_stub(bin_dir, cpmapi_ok=True, pcp_pmi_ok=True)
+        # Script copy lives in tmp_path so SCRIPT_DIR = tmp_path.
+        # check_man_page looks for $SCRIPT_DIR/man/pmlogsynth.1 — provide a stub.
+        man_dir = tmp_path / "man"
+        man_dir.mkdir()
+        (man_dir / "pmlogsynth.1").write_text(".TH STUB 1\n.SH NAME\nstub\n")
+
+        # No VIRTUAL_ENV — but a .venv with a working activate script IS present
+        venv_bin = tmp_path / ".venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        activate = venv_bin / "activate"
+        activate.write_text(
+            f'export VIRTUAL_ENV="{tmp_path / ".venv"}"\n'
+            f'export PATH="{venv_bin}:$PATH"\n'
+        )
+        return run_script(env, script=make_script_copy(tmp_path))
+
+    def test_no_venv_error_when_venv_dir_present(self, tmp_path):
+        assert "no virtualenv active" not in self._run(tmp_path).stdout
+
+    def test_summary_shown_after_auto_activation(self, tmp_path):
+        assert "pre-commit passed" in self._run(tmp_path).stdout
 
 
 class TestAllPrerequisitesSatisfied:

@@ -6,8 +6,9 @@ from typing import Set
 
 import pytest
 
-# Expected 24 metric names from cli-schema.md
+# Expected 53 metric names (24 original + 29 new from 004-pmrep-view-support)
 EXPECTED_METRICS: Set[str] = {
+    # Existing metrics
     "disk.all.read",
     "disk.all.read_bytes",
     "disk.all.write",
@@ -32,6 +33,39 @@ EXPECTED_METRICS: Set[str] = {
     "network.interface.in.packets",
     "network.interface.out.bytes",
     "network.interface.out.packets",
+    # New CPU sub-metrics
+    "kernel.all.cpu.nice",
+    "kernel.all.cpu.vuser",
+    "kernel.all.cpu.vnice",
+    "kernel.all.cpu.intr",
+    "kernel.all.cpu.guest",
+    "kernel.all.cpu.guest_nice",
+    "hinv.ncpu",
+    # New system metrics
+    "kernel.all.intr",
+    "kernel.all.pswitch",
+    "kernel.all.running",
+    "kernel.all.blocked",
+    # New memory metrics
+    "mem.util.active",
+    "mem.util.inactive",
+    "mem.util.slab",
+    "swap.used",
+    "swap.pagesin",
+    "swap.pagesout",
+    "mem.vmstat.pgpgin",
+    "mem.vmstat.pgpgout",
+    # New disk metrics
+    "disk.dev.read",
+    "disk.dev.write",
+    "disk.dev.read_merge",
+    "disk.dev.write_merge",
+    "disk.dev.blkread",
+    "disk.dev.blkwrite",
+    "disk.dev.read_rawactive",
+    "disk.dev.write_rawactive",
+    "disk.dev.avg_qlen",
+    "disk.dev.avactive",
 }
 
 
@@ -50,15 +84,15 @@ def _capture_list_metrics() -> list:
 
 
 @pytest.mark.unit
-def test_list_metrics_contains_24_names() -> None:
-    """--list-metrics output contains exactly 24 metric names."""
+def test_list_metrics_contains_53_names() -> None:
+    """--list-metrics output contains exactly 53 metric names."""
     lines = _capture_list_metrics()
-    assert len(lines) == 24, f"Expected 24 metrics, got {len(lines)}: {lines}"
+    assert len(lines) == 53, f"Expected 53 metrics, got {len(lines)}: {lines}"
 
 
 @pytest.mark.unit
 def test_list_metrics_matches_schema() -> None:
-    """--list-metrics output matches cli-schema.md metric list exactly."""
+    """--list-metrics output matches expected metric list exactly."""
     lines = _capture_list_metrics()
     actual = set(lines)
     assert actual == EXPECTED_METRICS, (
@@ -102,9 +136,9 @@ def test_domain_descriptors_match_cli_metric_names() -> None:
     from pmlogsynth.cli import _ALL_METRIC_NAMES  # type: ignore[attr-defined]
     from pmlogsynth.domains.cpu import CpuMetricModel
     from pmlogsynth.domains.disk import DiskMetricModel
-    from pmlogsynth.domains.load import LoadMetricModel
     from pmlogsynth.domains.memory import MemoryMetricModel
     from pmlogsynth.domains.network import NetworkMetricModel
+    from pmlogsynth.domains.system import SystemMetricModel
     from pmlogsynth.profile import (
         DiskDevice,
         HardwareProfile,
@@ -125,7 +159,7 @@ def test_domain_descriptors_match_cli_metric_names() -> None:
         MemoryMetricModel(),
         DiskMetricModel(),
         NetworkMetricModel(),
-        LoadMetricModel(),
+        SystemMetricModel(),
     ]:
         for desc in model.metric_descriptors(hw):
             domain_names.add(desc.name)

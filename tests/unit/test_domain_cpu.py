@@ -1,10 +1,17 @@
-"""Tier 1 unit tests for CpuMetricModel (T018).
+"""Tier 1 unit tests for CpuMetricModel (T018 / T007).
 
 No PCP imports — pure Python only.
 """
 
 from pmlogsynth.domains.cpu import CpuMetricModel
-from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_MSEC
+from pmlogsynth.pcp_constants import (
+    PM_SEM_COUNTER,
+    PM_SEM_DISCRETE,
+    PM_TYPE_U32,
+    PM_TYPE_U64,
+    UNITS_MSEC,
+    UNITS_NONE,
+)
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
@@ -29,25 +36,25 @@ def make_sampler(noise: float = 0.0, seed: int = 42) -> ValueSampler:
 
 
 def test_metric_descriptors_count() -> None:
-    """metric_descriptors() returns exactly 8 descriptors for any hardware."""
+    """metric_descriptors() returns exactly 15 descriptors for any hardware."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     descriptors = model.metric_descriptors(hw)
-    assert len(descriptors) == 8
+    assert len(descriptors) == 15
 
 
 def test_metric_descriptors_count_single_cpu() -> None:
-    """Count is still 8 even for single-CPU hardware."""
+    """Count is still 15 even for single-CPU hardware."""
     model = CpuMetricModel()
     hw = make_hw(cpus=1)
-    assert len(model.metric_descriptors(hw)) == 8
+    assert len(model.metric_descriptors(hw)) == 15
 
 
 def test_metric_descriptors_count_many_cpus() -> None:
-    """Count is still 8 even for large CPU counts."""
+    """Count is still 15 even for large CPU counts."""
     model = CpuMetricModel()
     hw = make_hw(cpus=128)
-    assert len(model.metric_descriptors(hw)) == 8
+    assert len(model.metric_descriptors(hw)) == 15
 
 
 def test_per_cpu_indom_is_set() -> None:
@@ -100,20 +107,27 @@ def test_descriptor_pmids() -> None:
 
 
 def test_descriptor_type_and_sem() -> None:
-    """All metrics must be PM_TYPE_U64 and PM_SEM_COUNTER."""
+    """Counter metrics are PM_TYPE_U64/PM_SEM_COUNTER; hinv.ncpu is discrete."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     for d in model.metric_descriptors(hw):
-        assert d.type_code == PM_TYPE_U64, "Expected PM_TYPE_U64"
-        assert d.sem == PM_SEM_COUNTER, "Expected PM_SEM_COUNTER"
+        if d.name == "hinv.ncpu":
+            assert d.type_code == PM_TYPE_U32, "hinv.ncpu: expected PM_TYPE_U32"
+            assert d.sem == PM_SEM_DISCRETE, "hinv.ncpu: expected PM_SEM_DISCRETE"
+        else:
+            assert d.type_code == PM_TYPE_U64, f"{d.name}: expected PM_TYPE_U64"
+            assert d.sem == PM_SEM_COUNTER, f"{d.name}: expected PM_SEM_COUNTER"
 
 
 def test_descriptor_units_msec() -> None:
-    """All metrics must have millisecond time units tuple."""
+    """Counter metrics have UNITS_MSEC; hinv.ncpu has UNITS_NONE."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     for d in model.metric_descriptors(hw):
-        assert d.units == UNITS_MSEC, f"{d.name}: unexpected units {d.units}"
+        if d.name == "hinv.ncpu":
+            assert d.units == UNITS_NONE, f"hinv.ncpu: unexpected units {d.units}"
+        else:
+            assert d.units == UNITS_MSEC, f"{d.name}: unexpected units {d.units}"
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +257,7 @@ def test_counter_accumulation_increases() -> None:
 
 
 def test_all_metric_names_present() -> None:
-    """All 8 metric names are present in the result dict."""
+    """All expected metric names are present in the compute() result dict."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     sampler = make_sampler()
@@ -257,6 +271,13 @@ def test_all_metric_names_present() -> None:
         "kernel.all.cpu.idle",
         "kernel.all.cpu.wait.total",
         "kernel.all.cpu.steal",
+        "kernel.all.cpu.nice",
+        "kernel.all.cpu.vuser",
+        "kernel.all.cpu.vnice",
+        "kernel.all.cpu.intr",
+        "kernel.all.cpu.guest",
+        "kernel.all.cpu.guest_nice",
+        "hinv.ncpu",
         "kernel.percpu.cpu.user",
         "kernel.percpu.cpu.sys",
         "kernel.percpu.cpu.idle",
@@ -369,7 +390,7 @@ def test_spike_has_less_idle_than_baseline() -> None:
 
 
 def test_idle_plus_busy_equals_all_ticks() -> None:
-    """idle + user + sys + iowait must equal num_cpus * interval * 1000 ms."""
+    """Sum of ALL cpu time buckets (including sub-metrics) must equal total ticks."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     sampler = make_sampler(noise=0.0)
@@ -385,5 +406,136 @@ def test_idle_plus_busy_equals_all_ticks() -> None:
         + result["kernel.all.cpu.idle"][None]
         + result["kernel.all.cpu.wait.total"][None]
         + result["kernel.all.cpu.steal"][None]
+        + result["kernel.all.cpu.nice"][None]
+        + result["kernel.all.cpu.vuser"][None]
+        + result["kernel.all.cpu.vnice"][None]
+        + result["kernel.all.cpu.intr"][None]
+        + result["kernel.all.cpu.guest"][None]
+        + result["kernel.all.cpu.guest_nice"][None]
     )
     assert total == all_ticks_ms, "Expected {} ms total, got {}".format(all_ticks_ms, total)
+
+
+# ---------------------------------------------------------------------------
+# T007: new sub-metric descriptors (written before implementation — must fail)
+# ---------------------------------------------------------------------------
+
+
+def test_new_cpu_sub_metric_descriptors_present() -> None:
+    """Descriptors for the 6 new CPU sub-metrics must be registered."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    names = {d.name for d in model.metric_descriptors(hw)}
+    for expected in (
+        "kernel.all.cpu.nice",
+        "kernel.all.cpu.vuser",
+        "kernel.all.cpu.vnice",
+        "kernel.all.cpu.intr",
+        "kernel.all.cpu.guest",
+        "kernel.all.cpu.guest_nice",
+    ):
+        assert expected in names, "Missing descriptor: {}".format(expected)
+
+
+def test_hinv_ncpu_descriptor_present() -> None:
+    """hinv.ncpu descriptor must be registered."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    names = {d.name for d in model.metric_descriptors(hw)}
+    assert "hinv.ncpu" in names
+
+
+def test_hinv_ncpu_descriptor_is_discrete() -> None:
+    """hinv.ncpu must have is_discrete=True, PM_SEM_DISCRETE, PM_TYPE_U32, UNITS_NONE."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    desc = {d.name: d for d in model.metric_descriptors(hw)}
+    d = desc["hinv.ncpu"]
+    assert d.is_discrete is True
+    assert d.sem == PM_SEM_DISCRETE
+    assert d.type_code == PM_TYPE_U32
+    assert d.units == UNITS_NONE
+    assert d.indom is None
+    assert d.pmid == (60, 0, 32)
+
+
+def test_hinv_ncpu_compute_equals_hardware_cpus() -> None:
+    """hinv.ncpu compute value must equal hardware.cpus."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=8)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(utilization=0.5)
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+    assert result["hinv.ncpu"][None] == 8
+
+
+def test_hinv_ncpu_falls_back_to_four_when_none() -> None:
+    """hinv.ncpu falls back to hardware.cpus even when stressor is None."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    result = model.compute(None, hw, interval=60, sampler=sampler)
+    assert result["hinv.ncpu"][None] == 4
+
+
+def test_sub_metrics_are_positive_at_nonzero_utilization() -> None:
+    """All 6 sub-metrics emit positive values when utilization > 0."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(utilization=0.8, noise=0.0)
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+    for name in (
+        "kernel.all.cpu.nice",
+        "kernel.all.cpu.vuser",
+        "kernel.all.cpu.vnice",
+        "kernel.all.cpu.intr",
+        "kernel.all.cpu.guest",
+        "kernel.all.cpu.guest_nice",
+    ):
+        assert result[name][None] > 0, "{} should be positive at 80% utilization".format(name)
+
+
+def test_sub_metrics_are_zero_at_zero_utilization() -> None:
+    """All sub-metrics are zero when utilization is 0."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(utilization=0.0, noise=0.0)
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+    for name in (
+        "kernel.all.cpu.nice",
+        "kernel.all.cpu.vuser",
+        "kernel.all.cpu.vnice",
+        "kernel.all.cpu.intr",
+        "kernel.all.cpu.guest",
+        "kernel.all.cpu.guest_nice",
+    ):
+        assert result[name][None] == 0, "{} should be 0 at 0% utilization".format(name)
+
+
+def test_new_sub_metric_pmids() -> None:
+    """Verify PMIDs for all 6 new CPU sub-metrics match research.md."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    desc = {d.name: d for d in model.metric_descriptors(hw)}
+    assert desc["kernel.all.cpu.nice"].pmid == (60, 0, 27)
+    assert desc["kernel.all.cpu.vuser"].pmid == (60, 0, 78)
+    assert desc["kernel.all.cpu.vnice"].pmid == (60, 0, 82)
+    assert desc["kernel.all.cpu.intr"].pmid == (60, 0, 34)
+    assert desc["kernel.all.cpu.guest"].pmid == (60, 0, 60)
+    assert desc["kernel.all.cpu.guest_nice"].pmid == (60, 0, 81)
+
+
+def test_sub_metrics_accumulate_as_counters() -> None:
+    """CPU sub-metric counters increase monotonically across ticks."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(utilization=0.5, noise=0.0)
+    result1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    result2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    for name in ("kernel.all.cpu.nice", "kernel.all.cpu.vuser", "kernel.all.cpu.intr"):
+        assert result2[name][None] > result1[name][None], (
+            "{} counter did not increase".format(name)
+        )

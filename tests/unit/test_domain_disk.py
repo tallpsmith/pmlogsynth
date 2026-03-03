@@ -1,8 +1,9 @@
-"""Tier 1 unit tests for DiskMetricModel (T020)."""
+"""Tier 1 unit tests for DiskMetricModel (T020 / T015)."""
 
 from unittest.mock import patch
 
 from pmlogsynth.domains.disk import DiskMetricModel
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_SEM_INSTANT, PM_TYPE_DOUBLE, PM_TYPE_U64
 from pmlogsynth.profile import DiskDevice, DiskStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
@@ -25,11 +26,12 @@ def _make_sampler(seed=0):
 
 
 class TestMetricDescriptors:
-    def test_returns_six_descriptors(self) -> None:
+    def test_returns_sixteen_descriptors(self) -> None:
+        """metric_descriptors() returns exactly 16 descriptors (6 existing + 10 new)."""
         model = DiskMetricModel()
         hw = _make_hw()
         descriptors = model.metric_descriptors(hw)
-        assert len(descriptors) == 6
+        assert len(descriptors) == 16
 
     def test_descriptor_names(self) -> None:
         model = DiskMetricModel()
@@ -41,6 +43,71 @@ class TestMetricDescriptors:
         assert "disk.all.write_bytes" in names
         assert "disk.dev.read_bytes" in names
         assert "disk.dev.write_bytes" in names
+
+    def test_new_descriptor_names(self) -> None:
+        """All 10 new disk.dev.* metrics must be registered."""
+        model = DiskMetricModel()
+        hw = _make_hw()
+        names = {d.name for d in model.metric_descriptors(hw)}
+        for expected in (
+            "disk.dev.read",
+            "disk.dev.write",
+            "disk.dev.read_merge",
+            "disk.dev.write_merge",
+            "disk.dev.blkread",
+            "disk.dev.blkwrite",
+            "disk.dev.read_rawactive",
+            "disk.dev.write_rawactive",
+            "disk.dev.avg_qlen",
+            "disk.dev.avactive",
+        ):
+            assert expected in names, "Missing descriptor: {}".format(expected)
+
+    def test_new_per_device_metrics_have_indom(self) -> None:
+        model = DiskMetricModel()
+        hw = _make_hw()
+        for d in model.metric_descriptors(hw):
+            if d.name in (
+                "disk.dev.read", "disk.dev.write", "disk.dev.read_merge",
+                "disk.dev.write_merge", "disk.dev.blkread", "disk.dev.blkwrite",
+                "disk.dev.read_rawactive", "disk.dev.write_rawactive",
+                "disk.dev.avg_qlen", "disk.dev.avactive",
+            ):
+                assert d.indom == (60, 1), f"{d.name}: expected indom (60,1)"
+
+    def test_new_counter_metrics_semantics(self) -> None:
+        model = DiskMetricModel()
+        hw = _make_hw()
+        desc = {d.name: d for d in model.metric_descriptors(hw)}
+        for name in (
+            "disk.dev.read", "disk.dev.write", "disk.dev.read_merge", "disk.dev.write_merge",
+            "disk.dev.blkread", "disk.dev.blkwrite", "disk.dev.read_rawactive",
+            "disk.dev.write_rawactive", "disk.dev.avactive",
+        ):
+            assert desc[name].sem == PM_SEM_COUNTER, f"{name}: expected PM_SEM_COUNTER"
+            assert desc[name].type_code == PM_TYPE_U64, f"{name}: expected PM_TYPE_U64"
+
+    def test_avg_qlen_is_double_instant(self) -> None:
+        model = DiskMetricModel()
+        hw = _make_hw()
+        desc = {d.name: d for d in model.metric_descriptors(hw)}
+        assert desc["disk.dev.avg_qlen"].sem == PM_SEM_INSTANT
+        assert desc["disk.dev.avg_qlen"].type_code == PM_TYPE_DOUBLE
+
+    def test_new_pmids(self) -> None:
+        model = DiskMetricModel()
+        hw = _make_hw()
+        desc = {d.name: d for d in model.metric_descriptors(hw)}
+        assert desc["disk.dev.read"].pmid == (60, 5, 0)
+        assert desc["disk.dev.write"].pmid == (60, 5, 1)
+        assert desc["disk.dev.read_merge"].pmid == (60, 5, 2)
+        assert desc["disk.dev.write_merge"].pmid == (60, 5, 3)
+        assert desc["disk.dev.blkread"].pmid == (60, 5, 7)
+        assert desc["disk.dev.blkwrite"].pmid == (60, 5, 8)
+        assert desc["disk.dev.read_rawactive"].pmid == (60, 5, 9)
+        assert desc["disk.dev.write_rawactive"].pmid == (60, 5, 10)
+        assert desc["disk.dev.avg_qlen"].pmid == (60, 5, 11)
+        assert desc["disk.dev.avactive"].pmid == (60, 5, 12)
 
     def test_aggregate_metrics_have_no_indom(self) -> None:
         model = DiskMetricModel()
@@ -300,3 +367,117 @@ class TestNoiseClamping:
             result = model.compute(stressor, hw, interval=60, sampler=sampler)
         # With gauss returning -5.0, read_mbps * -5.0 = negative → clamped to 0
         assert result["disk.all.read_bytes"][None] == 0
+
+
+# ---------------------------------------------------------------------------
+# T015: new disk.dev.* metrics (written before implementation — must fail)
+# ---------------------------------------------------------------------------
+
+
+class TestNewDiskMetrics:
+    def test_new_per_device_metrics_present_in_result(self) -> None:
+        """All 10 new disk metrics appear in compute() output."""
+        model = DiskMetricModel()
+        hw = _make_hw()
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=100.0, write_mbps=50.0)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        for name in (
+            "disk.dev.read", "disk.dev.write",
+            "disk.dev.read_merge", "disk.dev.write_merge",
+            "disk.dev.blkread", "disk.dev.blkwrite",
+            "disk.dev.read_rawactive", "disk.dev.write_rawactive",
+            "disk.dev.avg_qlen", "disk.dev.avactive",
+        ):
+            assert name in result, "Missing metric: {}".format(name)
+
+    def test_new_metrics_keyed_by_disk_device_name(self) -> None:
+        """New per-device metrics use disk device names as instance keys."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda"), DiskDevice(name="sdb")])
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=100.0, write_mbps=50.0)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        assert set(result["disk.dev.read"].keys()) == {"sda", "sdb"}
+        assert set(result["disk.dev.write"].keys()) == {"sda", "sdb"}
+
+    def test_read_iops_split_evenly_across_disks(self) -> None:
+        """disk.dev.read = iops_read / num_disks per device."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda"), DiskDevice(name="sdb")])
+        sampler = _make_sampler()
+        # iops_read = 500 * 60 = 30000; per disk = 15000
+        stressor = DiskStressor(read_mbps=100.0, iops_read=500)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        assert result["disk.dev.read"]["sda"] == 15000
+        assert result["disk.dev.read"]["sdb"] == 15000
+
+    def test_blkread_is_sectors_from_bytes(self) -> None:
+        """disk.dev.blkread = read_bytes / 512 / num_disks (sector count)."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda")])
+        sampler = _make_sampler()
+        # 1 MB/s * 60s = 62914560 bytes; / 512 = 122880 sectors
+        stressor = DiskStressor(read_mbps=1.0, write_mbps=0.0)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        expected = int(1.0 * 1024 * 1024 * 60 / 512)
+        assert result["disk.dev.blkread"]["sda"] == expected
+
+    def test_avg_qlen_is_float(self) -> None:
+        """disk.dev.avg_qlen must be a float value."""
+        model = DiskMetricModel()
+        hw = _make_hw()
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=100.0, write_mbps=50.0)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        for val in result["disk.dev.avg_qlen"].values():
+            assert isinstance(val, float), "avg_qlen should be float, got {}".format(type(val))
+
+    def test_new_counters_accumulate_monotonically(self) -> None:
+        """New counter metrics (read, write, blkread) increase across ticks."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda")])
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=100.0, write_mbps=50.0, iops_read=500, iops_write=200)
+        r1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+        r2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+        for name in ("disk.dev.read", "disk.dev.write", "disk.dev.blkread", "disk.dev.blkwrite"):
+            assert r2[name]["sda"] > r1[name]["sda"], "{} did not accumulate".format(name)
+
+    def test_read_merge_is_15pct_of_read_iops(self) -> None:
+        """disk.dev.read_merge = iops_read * 0.15 / num_disks."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda")])
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=100.0, iops_read=500)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        # iops_read = 500 * 60 = 30000; merge = 30000 * 0.15 = 4500
+        assert result["disk.dev.read_merge"]["sda"] == int(30000 * 0.15)
+
+    def test_avactive_is_sum_of_rawactive(self) -> None:
+        """disk.dev.avactive = read_rawactive + write_rawactive (same tick, non-accumulated)."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda")])
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=10.0, write_mbps=5.0)
+        # Use a fresh sampler to get the first tick values without accumulation offset
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        # avactive should be non-zero when there is I/O
+        assert result["disk.dev.avactive"]["sda"] > 0
+
+    def test_zero_io_new_metrics_are_zero(self) -> None:
+        """All new metrics are zero when read/write are both 0."""
+        model = DiskMetricModel()
+        hw = _make_hw(disks=[DiskDevice(name="sda")])
+        sampler = _make_sampler()
+        stressor = DiskStressor(read_mbps=0.0, write_mbps=0.0)
+        result = model.compute(stressor, hw, interval=60, sampler=sampler)
+        for name in (
+            "disk.dev.read", "disk.dev.write",
+            "disk.dev.blkread", "disk.dev.blkwrite",
+            "disk.dev.avg_qlen", "disk.dev.avactive",
+        ):
+            for val in result[name].values():
+                assert val == 0 or val == 0.0, "{} should be 0 with zero I/O, got {}".format(
+                    name, val
+                )

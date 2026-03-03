@@ -4,6 +4,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-01
 
 ## Active Technologies
 - Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as (003-dx-improvements)
+- Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML (004-pmrep-view-support)
+- PCP v3 binary archive files (004-pmrep-view-support)
 
 - **Language**: Python 3.8+ (minimum); system Python tested in CI with PCP installed
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
@@ -83,18 +85,54 @@ pmlogsynth --list-metrics
 - No NumPy — use `random.gauss` from stdlib
 
 ## Recent Changes
+- 004-pmrep-view-support: Added Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML
 - 003-dx-improvements: Added Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as
 - 002-phase2-e2e-docs: Added Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML
 
-- 001-pmlogsynth-phase1: Initial project setup — Python 3.8+ CLI tool with
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery
 
 <!-- MANUAL ADDITIONS START -->
+## PCP Metric PMIDs — macOS vs Linux
+
+**macOS `pminfo` is useless for verifying Linux PMIDs.** macOS PCP uses domain 78 for
+nearly everything; Linux uses domain 60 (linux PMDA) and domain 58 (existing pmlogsynth
+convention for mem.util.*). Running `pminfo -d <metric>` on macOS either returns wrong
+domain numbers or "Unknown metric name" for Linux-only metrics.
+
+**Authoritative source for Linux PMIDs:**
+`https://github.com/performancecopilot/pcp` → `src/pmdas/linux/pmda.c`
+
+Key cluster definitions (from `src/pmdas/linux/linux.h`):
+- `CLUSTER_STAT = 0` — `/proc/stat` (cpu, disk, scheduler, swap page counters)
+- `CLUSTER_MEMINFO = 1` — `/proc/meminfo` (mem.util.*, swap.used, mem.physmem)
+- `CLUSTER_LOADAVG = 2` — `/proc/loadavg`
+- `CLUSTER_VMSTAT = 28` — `/proc/vmstat` (mem.vmstat.pgpgin etc.)
+- `CLUSTER_FILESYS = 5` — mounted filesystems (NOT disk.dev.* — common mistake)
+
+**Existing code deviates from real PMIDs — intentionally and safely.** pmlogsynth archives
+are self-contained: pmrep reads metrics by name via the archive's own PMNS. The PMID just
+needs to be unique within the archive, not match the live PMDA. Existing code uses:
+- Domain 58 cluster 0 for `mem.util.*` (real PMDA: domain 60 cluster 1) — works fine
+- Cluster 5 for `disk.dev.*` (real PMDA: cluster 0 = CLUSTER_STAT) — works fine
+
+**Convention for new metrics:** follow the existing code's cluster/domain conventions to
+maintain internal consistency. Pick item numbers that don't conflict with existing
+descriptors in the same (domain, cluster) pair.
+
+**Linux verification command** (run on CI or a Linux box with PCP installed):
+```bash
+pminfo -md kernel.all.cpu.vuser kernel.all.intr hinv.ncpu swap.used disk.dev.read
+```
+
+
 ## Workflow — MANDATORY
 
 **Run `./pre-commit.sh` before every commit and push.** It is the single gate
 that mirrors CI exactly: mandoc lint, ruff, mypy, unit + integration tests,
 and E2E tests when PCP is available.
+
+**MANDATORY for Claude:** When asked to "commit and push" (or any variant), ALWAYS
+run `./pre-commit.sh` first and confirm it is green before pushing. No pre-commit, no push.
 
 First-time setup (macOS):
 ```bash
@@ -110,9 +148,16 @@ All locally generated PCP archives go in `generated-archives/` (gitignored).
 Never generate archives to the project root or ad-hoc paths.
 
 ```bash
-pmlogsynth -o ./generated-archives/spike spike.yml
+pmlogsynth -o ./generated-archives/spike docs/spike.yml
 pmstat -a ./generated-archives/spike
 ```
 
 See `docs/pcp-tools.md` for the full PCP toolkit reference and validation workflow.
+
+## Example Profile Files
+
+`docs/spike.yml` and `docs/complete-example.yml` are the canonical example profiles.
+
+**Invariant**: the inline YAML block in `README.md` Quick Start (step 1) must always
+match `docs/spike.yml` exactly. If one changes, update the other.
 <!-- MANUAL ADDITIONS END -->

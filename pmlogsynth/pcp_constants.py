@@ -17,6 +17,9 @@ import cpmapi as _c
 # ------------------------------------------------------------------
 PM_TYPE_FLOAT: int = _c.PM_TYPE_FLOAT
 PM_TYPE_U64: int = _c.PM_TYPE_U64
+PM_TYPE_U32: int = _c.PM_TYPE_U32
+PM_TYPE_32: int = _c.PM_TYPE_32
+PM_TYPE_DOUBLE: int = _c.PM_TYPE_DOUBLE
 
 # ------------------------------------------------------------------
 # Metric semantics  (PM_SEM_*)

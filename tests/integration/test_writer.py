@@ -137,7 +137,8 @@ def test_writer_calls_pmiwrite_per_sample(tmp_path: Path) -> None:
         writer = ArchiveWriter(output_path=output, profile=profile, hardware=hardware)
         writer.write(timeline=timeline, sampler=sampler)
 
-    assert mock_log.pmiWrite.call_count == expected_samples
+    # +1 for the discrete pass (hinv.ncpu) written before the per-sample loop
+    assert mock_log.pmiWrite.call_count == expected_samples + 1
 
 
 @pytest.mark.integration
@@ -184,6 +185,49 @@ def test_writer_conflict_detection(tmp_path: Path) -> None:
         writer = ArchiveWriter(output_path=output, profile=profile, hardware=hardware)
         with pytest.raises(ArchiveConflictError):
             writer.write(timeline=timeline, sampler=sampler)
+
+
+@pytest.mark.integration
+def test_writer_discrete_sample_written_once(tmp_path: Path) -> None:
+    """hinv.ncpu (is_discrete=True) is written exactly once before the per-sample loop (T010)."""
+    hardware = _make_hardware()
+    profile = _make_profile(hardware, tmp_path)
+    sampler = ValueSampler(noise=0.0, seed=42)
+    timeline = TimelineSequencer(profile).expand()
+    expected_samples = len(timeline.samples)
+    output = str(tmp_path / "out")
+
+    mock_log = MagicMock()
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
+        mock_pmi.pmiLogImport.return_value = mock_log
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
+
+        from pmlogsynth.writer import ArchiveWriter
+
+        writer = ArchiveWriter(output_path=output, profile=profile, hardware=hardware)
+        writer.write(timeline=timeline, sampler=sampler)
+
+    # pmiWrite: 1 discrete call (one interval before first sample) + expected_samples regular calls
+    assert mock_log.pmiWrite.call_count == expected_samples + 1
+
+    # hinv.ncpu must appear in pmiPutValue exactly once (discrete = one shot)
+    put_value_calls = [c.args[0] for c in mock_log.pmiPutValue.call_args_list]
+    assert "hinv.ncpu" in put_value_calls, "hinv.ncpu was never emitted via pmiPutValue"
+    hinv_calls = [c for c in mock_log.pmiPutValue.call_args_list if c.args[0] == "hinv.ncpu"]
+    assert len(hinv_calls) == 1, "hinv.ncpu emitted {} times; expected 1".format(len(hinv_calls))
+
+    # The discrete pmiWrite must use a timestamp BEFORE the first real sample's timestamp
+    first_real_ts = timeline.samples[0].timestamp_sec
+    discrete_write_ts = mock_log.pmiWrite.call_args_list[0].args[0]
+    assert discrete_write_ts < first_real_ts, (
+        "Discrete record ts={} is not before first real sample ts={}".format(
+            discrete_write_ts, first_real_ts
+        )
+    )
+    assert discrete_write_ts > 0, "Discrete record must not be at epoch 0 (1970)"
 
 
 @pytest.mark.integration

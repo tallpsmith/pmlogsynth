@@ -1,0 +1,51 @@
+meta:
+  hostname: prod-sim
+  timezone: UTC
+  duration: 24h
+  interval: 60
+  noise: 0.03
+
+host:
+  profile: generic-large
+
+phases:
+  # 6 hours of quiet overnight baseline
+  - name: baseline
+    duration: 6h
+    cpu:
+      utilization: 0.15
+      user_ratio: 0.70
+      sys_ratio: 0.20
+      iowait_ratio: 0.10
+    memory:
+      used_ratio: 0.40
+      cache_ratio: 0.30
+    disk:
+      read_mbps: 20.0
+      write_mbps: 10.0
+
+  # 6-hour linear ramp into business hours
+  - name: ramp
+    duration: 6h
+    transition: linear
+    cpu:
+      utilization: 0.80
+    memory:
+      used_ratio: 0.65
+    disk:
+      read_mbps: 200.0
+      write_mbps: 80.0
+
+  # 12-hour sustained peak load
+  - name: peak
+    duration: 12h
+    cpu:
+      utilization: 0.90
+    memory:
+      used_ratio: 0.80
+    disk:
+      read_mbps: 500.0
+      write_mbps: 200.0
+    network:
+      rx_mbps: 800.0
+      tx_mbps: 200.0

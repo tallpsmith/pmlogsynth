@@ -6,14 +6,14 @@ Tier 1 and Tier 2 tests must never import from this module without mocking pcp.
 
 import sys
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Set
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.domains.cpu import CpuMetricModel
 from pmlogsynth.domains.disk import DiskMetricModel
-from pmlogsynth.domains.load import LoadMetricModel
 from pmlogsynth.domains.memory import MemoryMetricModel
 from pmlogsynth.domains.network import NetworkMetricModel
+from pmlogsynth.domains.system import SystemMetricModel
 from pmlogsynth.profile import HardwareProfile, WorkloadProfile
 from pmlogsynth.sampler import ValueSampler
 from pmlogsynth.timeline import ExpandedTimeline
@@ -60,7 +60,7 @@ class ArchiveWriter:
             MemoryMetricModel(),
             DiskMetricModel(),
             NetworkMetricModel(mean_packet_bytes=mean_pkt),
-            LoadMetricModel(),
+            SystemMetricModel(),
         ]
 
     def write(self, timeline: ExpandedTimeline, sampler: ValueSampler) -> None:
@@ -112,11 +112,25 @@ class ArchiveWriter:
             # Register instances for instanced metrics
             self._register_instances(log)
 
-            # Write samples
+            # Build a set of discrete metric names to skip in per-sample loop
+            discrete_names = {
+                desc.name
+                for model in self._models
+                for desc in model.metric_descriptors(self._hardware)
+                if desc.is_discrete
+            }
+
+            # Write discrete metrics once, one interval before the first real sample.
+            # Using epoch 0 here would create a 55-year gap in the archive.
             interval = self._profile.meta.interval
+            first_ts = timeline.samples[0].timestamp_sec if timeline.samples else 0
+            discrete_ts = max(0, first_ts - interval)
+            self._write_discrete_sample(log, sampler, discrete_names, discrete_ts)
+
+            # Write samples
             for sample in timeline.samples:
                 for model in self._models:
-                    if isinstance(model, (CpuMetricModel, LoadMetricModel)):
+                    if isinstance(model, (CpuMetricModel, SystemMetricModel)):
                         stressor: Any = sample.cpu
                     elif isinstance(model, MemoryMetricModel):
                         stressor = sample.memory
@@ -126,6 +140,8 @@ class ArchiveWriter:
                         stressor = sample.network
                     values = model.compute(stressor, self._hardware, interval, sampler)
                     for metric_name, instances in values.items():
+                        if metric_name in discrete_names:
+                            continue  # already written in discrete pass
                         for instance, value in instances.items():
                             inst = instance if instance is not None else ""
                             log.pmiPutValue(metric_name, inst, str(value))
@@ -165,6 +181,20 @@ class ArchiveWriter:
             raise ArchiveGenerationError(str(exc)) from exc
         finally:
             del log  # pmiEnd() + finalises .0/.index/.meta
+
+    def _write_discrete_sample(
+        self, log: Any, sampler: ValueSampler, discrete_names: Set[str], timestamp_sec: int
+    ) -> None:
+        """Emit all is_discrete metrics once at the given timestamp."""
+        for model in self._models:
+            values = model.compute(None, self._hardware, 1, sampler)
+            for metric_name, instances in values.items():
+                if metric_name not in discrete_names:
+                    continue
+                for instance, value in instances.items():
+                    inst = instance if instance is not None else ""
+                    log.pmiPutValue(metric_name, inst, str(value))
+        log.pmiWrite(timestamp_sec, 0)
 
     def _register_instances(self, log: Any) -> None:
         """Register per-CPU, per-disk, per-NIC instances."""

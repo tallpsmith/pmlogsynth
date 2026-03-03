@@ -11,6 +11,34 @@ class ValidationError(Exception):
     """Raised when a workload or hardware profile fails validation."""
 
 
+_DURATION_SUFFIXES = {"s": 1, "m": 60, "h": 3600}
+
+
+def parse_duration(raw: Any) -> int:
+    """Parse a duration value to seconds.
+
+    Accepts plain integers (seconds) or strings like '30s', '10m', '24h'.
+    Raises ValidationError for invalid formats or non-positive results.
+    """
+    if isinstance(raw, int):
+        seconds = raw
+    elif isinstance(raw, str) and raw and raw[-1] in _DURATION_SUFFIXES:
+        multiplier = _DURATION_SUFFIXES[raw[-1]]
+        body = raw[:-1]
+        try:
+            seconds = int(body) * multiplier
+        except ValueError:
+            raise ValidationError(f"invalid duration {raw!r}: non-integer body")
+    else:
+        raise ValidationError(
+            f"invalid duration {raw!r}: use a positive integer (seconds) or a string "
+            f"like '30s', '10m', '24h'"
+        )
+    if seconds <= 0:
+        raise ValidationError(f"invalid duration {raw!r}: must be positive")
+    return seconds
+
+
 # ---------------------------------------------------------------------------
 # Hardware profile entities
 # ---------------------------------------------------------------------------
@@ -161,9 +189,12 @@ class WorkloadProfile:
 def _parse_meta(raw: Any) -> ProfileMeta:
     if not isinstance(raw, dict):
         raise ValidationError("meta must be a mapping")
-    duration = raw.get("duration")
-    if not isinstance(duration, int) or duration <= 0:
-        raise ValidationError("meta.duration must be a positive integer")
+    try:
+        duration = parse_duration(raw.get("duration", 86400))
+    except ValidationError:
+        raise ValidationError(
+            "meta.duration must be a positive integer or duration string (e.g. '24h', '30m')"
+        )
     interval = raw.get("interval", 60)
     if not isinstance(interval, int) or interval <= 0:
         raise ValidationError("meta.interval must be a positive integer (FR-030)")
@@ -311,9 +342,12 @@ def _parse_phases(raw: Any) -> List[Phase]:
         name = p.get("name")
         if not name:
             raise ValidationError(f"phases[{i}].name is required")
-        duration = p.get("duration")
-        if not isinstance(duration, int) or duration <= 0:
-            raise ValidationError(f"phases[{i}].duration must be a positive integer")
+        try:
+            duration = parse_duration(p.get("duration"))
+        except ValidationError:
+            raise ValidationError(
+                f"phases[{i}].duration must be a positive integer or duration string (e.g. '1h')"
+            )
         transition = p.get("transition")
         if transition is not None and transition not in ("instant", "linear"):
             raise ValidationError(
@@ -322,7 +356,7 @@ def _parse_phases(raw: Any) -> List[Phase]:
         repeat = p.get("repeat")  # "daily" or int — validated later
         phases.append(Phase(
             name=str(name),
-            duration=int(duration),
+            duration=duration,
             transition=transition,
             repeat=repeat,
             cpu=_parse_cpu_stressor(p["cpu"]) if "cpu" in p else None,

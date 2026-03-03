@@ -97,6 +97,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=False,
         help="List all PCP metric names this tool can produce and exit.",
     )
+    parser.add_argument(
+        "--show-schema",
+        action="store_true",
+        default=False,
+        help="Print the profile schema context document (for AI agents) and exit.",
+    )
     # -C on top level for --list-profiles
     parser.add_argument(
         "-C", "--config-dir",
@@ -208,6 +214,17 @@ def _parse_start_time(ts: str) -> datetime:
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
+
+def _cmd_show_schema() -> int:
+    import importlib.resources as _pkg
+    try:
+        text = _pkg.read_text("pmlogsynth", "schema_context.md", encoding="utf-8")
+    except (FileNotFoundError, ModuleNotFoundError) as exc:
+        print(f"error: schema context not found: {exc}", file=sys.stderr)
+        return 1
+    print(text, end="")
+    return 0
+
 
 def _cmd_list_metrics() -> int:
     for name in _ALL_METRIC_NAMES:
@@ -349,7 +366,7 @@ def _preprocess_argv(argv: List[str]) -> List[str]:
 
     # Global flags that belong to the top-level parser only
     _GLOBAL_FLAGS = {"-V", "--version", "-h", "--help",
-                     "--list-profiles", "--list-metrics"}
+                     "--list-profiles", "--list-metrics", "--show-schema"}
 
     result = list(argv)
     i = 0
@@ -401,6 +418,9 @@ def main() -> None:
         sys.exit(2)
 
     # Informational commands (top-level flags, checked before subcommand)
+    if getattr(args, "show_schema", False):
+        sys.exit(_cmd_show_schema())
+
     if getattr(args, "list_metrics", False):
         sys.exit(_cmd_list_metrics())
 

@@ -19,7 +19,7 @@ and testing of each story. Tests are included per the mandatory TDD workflow in 
 **Purpose**: Package infrastructure — must be complete before the schema context document
 can be bundled and loaded at runtime.
 
-- [ ] T001 Add `schema_context.md` to `[tool.setuptools.package-data]` entry for `pmlogsynth` in `pyproject.toml` (alongside existing `profiles/*.yaml`)
+- [X] T001 Add `schema_context.md` to `[tool.setuptools.package-data]` entry for `pmlogsynth` in `pyproject.toml` (alongside existing `profiles/*.yaml`)
 
 **Checkpoint**: `pip install -e .` picks up `schema_context.md` from the package; `importlib.resources.read_text("pmlogsynth", "schema_context.md")` can be exercised without `FileNotFoundError` once the file exists.
 
@@ -32,9 +32,9 @@ US1, US2, and US3 all depend on it existing, being correct, and being within the
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Write five failing Tier 1 unit tests in `tests/unit/test_schema_context.py`: `test_schema_context_file_exists`, `test_schema_context_version_matches`, `test_schema_context_has_required_sections` (checks `meta`, `host`, `phases` headings), `test_schema_context_lists_hardware_profiles` (all 7 bundled profiles), `test_schema_context_within_token_budget` (`len(content) <= 32000`). Confirm all five fail before proceeding.
+- [X] T002 Write five failing Tier 1 unit tests in `tests/unit/test_schema_context.py`: `test_schema_context_file_exists`, `test_schema_context_version_matches`, `test_schema_context_has_required_sections` (checks `meta`, `host`, `phases` headings), `test_schema_context_lists_hardware_profiles` (all 7 bundled profiles), `test_schema_context_within_token_budget` (`len(content) <= 32000`). Confirm all five fail before proceeding.
 
-- [ ] T003 Create `pmlogsynth/schema_context.md` with: (1) `# pmlogsynth Profile Schema` heading, (2) `Schema Version: <version>` line matching `pyproject.toml`, (3) full field-table sections for `meta`, `host`, and `phases` (including all stressor subfields), (4) list of all 7 bundled hardware profile names, (5) one simple and one complex annotated YAML example, (6) "Common Validation Errors" section covering all error messages from `profile.py` and the edge cases in `spec.md`, (7) total character count ≤ 32,000. Run tests from T002 and confirm all pass.
+- [X] T003 Create `pmlogsynth/schema_context.md` with: (1) `# pmlogsynth Profile Schema` heading, (2) `Schema Version: <version>` line matching `pyproject.toml`, (3) full field-table sections for `meta`, `host`, and `phases` (including all stressor subfields), (4) list of all 7 bundled hardware profile names, (5) one simple and one complex annotated YAML example, (6) "Common Validation Errors" section covering all error messages from `profile.py` and the edge cases in `spec.md`, (7) total character count ≤ 32,000. Run tests from T002 and confirm all pass.
 
 **Checkpoint**: `pytest tests/unit/test_schema_context.py -k "not cli"` passes (5 tests green). Schema doc exists and is complete.
 
@@ -50,19 +50,19 @@ US1, US2, and US3 all depend on it existing, being correct, and being within the
 
 > **Write these tests FIRST. Confirm they FAIL before implementation.**
 
-- [ ] T004 [US1] Add failing test `test_show_schema_cli_exits_zero` to `tests/unit/test_schema_context.py`: invoke `pmlogsynth --show-schema` via `subprocess.run`, assert exit code 0 and non-empty stdout. Confirm it fails (ImportError or exit ≠ 0) before proceeding.
+- [X] T004 [US1] Add failing test `test_show_schema_cli_exits_zero` to `tests/unit/test_schema_context.py`: invoke `pmlogsynth --show-schema` via `subprocess.run`, assert exit code 0 and non-empty stdout. Confirm it fails (ImportError or exit ≠ 0) before proceeding.
 
 ### Implementation for User Story 1
 
-- [ ] T005 [P] [US1] Add `"--show-schema"` to the `_GLOBAL_FLAGS` set in `_preprocess_argv()` in `pmlogsynth/cli.py` (prevents the flag being consumed by the generate subparser)
+- [X] T005 [P] [US1] Add `"--show-schema"` to the `_GLOBAL_FLAGS` set in `_preprocess_argv()` in `pmlogsynth/cli.py` (prevents the flag being consumed by the generate subparser)
 
-- [ ] T006 [P] [US1] Register `--show-schema` argument in `_build_parser()` in `pmlogsynth/cli.py` with `action="store_true"`, alongside `--list-metrics` and `--list-profiles`
+- [X] T006 [P] [US1] Register `--show-schema` argument in `_build_parser()` in `pmlogsynth/cli.py` with `action="store_true"`, alongside `--list-metrics` and `--list-profiles`
 
-- [ ] T007 [US1] Implement `_cmd_show_schema() -> int` in `pmlogsynth/cli.py`: load `pmlogsynth/schema_context.md` via `importlib.resources.read_text("pmlogsynth", "schema_context.md", encoding="utf-8")`, print to stdout with `end=""`, return 0; on `FileNotFoundError` or `ModuleNotFoundError` print to stderr and return 1 (depends on T005, T006)
+- [X] T007 [US1] Implement `_cmd_show_schema() -> int` in `pmlogsynth/cli.py`: load `pmlogsynth/schema_context.md` via `importlib.resources.read_text("pmlogsynth", "schema_context.md", encoding="utf-8")`, print to stdout with `end=""`, return 0; on `FileNotFoundError` or `ModuleNotFoundError` print to stderr and return 1 (depends on T005, T006)
 
-- [ ] T008 [US1] Add `show_schema` dispatch block in `main()` in `pmlogsynth/cli.py`: `if getattr(args, "show_schema", False): sys.exit(_cmd_show_schema())` — placed after version/help checks and before `--list-metrics`/`--list-profiles` (depends on T007). Run T004 test and confirm it passes.
+- [X] T008 [US1] Add `show_schema` dispatch block in `main()` in `pmlogsynth/cli.py`: `if getattr(args, "show_schema", False): sys.exit(_cmd_show_schema())` — placed after version/help checks and before `--list-metrics`/`--list-profiles` (depends on T007). Run T004 test and confirm it passes.
 
-- [ ] T009 [US1] Create `.claude/commands/generate-profile.md` implementing the 7-step skill flow from `contracts/claude-skill.md`: Step 1 (`pmlogsynth --show-schema` → `$SCHEMA_CONTEXT`), Step 2 (workload description from `$ARGUMENTS` or prompt), Step 4 (AI generation with schema + description, produce YAML only, enforce phase duration sum), Step 5 (write to `generated-archives/<slug>.yaml`, numeric suffix on collision), Step 6 (validate with `pmlogsynth --validate`, retry once on exit 1, stop on exit 2), Step 7 (report success with profile path + archive command + inspect command). Do NOT include Step 3 yet (that is US3).
+- [X] T009 [US1] Create `.claude/commands/generate-profile.md` implementing the 7-step skill flow from `contracts/claude-skill.md`: Step 1 (`pmlogsynth --show-schema` → `$SCHEMA_CONTEXT`), Step 2 (workload description from `$ARGUMENTS` or prompt), Step 4 (AI generation with schema + description, produce YAML only, enforce phase duration sum), Step 5 (write to `generated-archives/<slug>.yaml`, numeric suffix on collision), Step 6 (validate with `pmlogsynth --validate`, retry once on exit 1, stop on exit 2), Step 7 (report success with profile path + archive command + inspect command). Do NOT include Step 3 yet (that is US3).
 
 **Checkpoint**: `pytest tests/unit/test_schema_context.py` passes (all 6 tests green). `pmlogsynth --show-schema` prints the schema doc and exits 0. `/generate-profile` skill exists and is invocable in Claude Code.
 
@@ -76,7 +76,7 @@ US1, US2, and US3 all depend on it existing, being correct, and being within the
 
 > US2 is architecturally served by Phase 2 (schema doc) and US1 (--show-schema flag). The implementation task here is ensuring the "Common Validation Errors" section in the schema doc is comprehensive enough for AI self-correction — covering all edge cases from the spec and quickstart.
 
-- [ ] T010 [US2] Review `pmlogsynth/schema_context.md` Common Validation Errors section against: (1) all edge cases listed in `spec.md` (unknown metric names, archive size, structurally valid but schema-invalid YAML, contradictory constraints, partial/malformed output), (2) the error table in `quickstart.md`. Add any missing error + fix pairs. Confirm the file still passes all 6 tests from T002 + T004 after edits.
+- [X] T010 [US2] Review `pmlogsynth/schema_context.md` Common Validation Errors section against: (1) all edge cases listed in `spec.md` (unknown metric names, archive size, structurally valid but schema-invalid YAML, contradictory constraints, partial/malformed output), (2) the error table in `quickstart.md`. Add any missing error + fix pairs. Confirm the file still passes all 6 tests from T002 + T004 after edits.
 
 **Checkpoint**: `pmlogsynth --show-schema` output is self-contained with enough error guidance that an AI agent's first-pass failure is self-correctable from the error message alone.
 
@@ -88,7 +88,7 @@ US1, US2, and US3 all depend on it existing, being correct, and being within the
 
 **Independent Test**: Run `/generate-profile update generated-archives/my-workload.yaml to add a network saturation event at midnight`. Confirm the existing profile's unchanged sections are preserved and the requested modification is reflected in the output. `pmlogsynth --validate` exits 0.
 
-- [ ] T011 [US3] Update `.claude/commands/generate-profile.md` to insert Step 3 (Optional: Acquire Existing Profile) between Steps 2 and 4: if the user's description references an existing profile, ask for the file path; read its contents; include the existing YAML in the generation prompt alongside the schema context and the modification request (FR-009). No new CLI or Python changes required.
+- [X] T011 [US3] Update `.claude/commands/generate-profile.md` to insert Step 3 (Optional: Acquire Existing Profile) between Steps 2 and 4: if the user's description references an existing profile, ask for the file path; read its contents; include the existing YAML in the generation prompt alongside the schema context and the modification request (FR-009). No new CLI or Python changes required.
 
 **Checkpoint**: `/generate-profile` skill handles both generate-from-scratch (US1) and iterative refinement (US3) in a single skill file. All three user stories are independently functional.
 
@@ -98,9 +98,9 @@ US1, US2, and US3 all depend on it existing, being correct, and being within the
 
 **Purpose**: Man page sync and final quality gate. Mandatory per project CLAUDE.md invariants.
 
-- [ ] T012 Update `man/pmlogsynth.1`: add `--show-schema` to SYNOPSIS and to the Global Options subsection with description matching `_build_parser()` help text; backfill `--list-metrics`, `--list-profiles`, and `-C` which appear in SYNOPSIS but are currently absent from the OPTIONS section. Run `mandoc -T lint man/pmlogsynth.1` and confirm no lint errors.
+- [X] T012 Update `man/pmlogsynth.1`: add `--show-schema` to SYNOPSIS and to the Global Options subsection with description matching `_build_parser()` help text; backfill `--list-metrics`, `--list-profiles`, and `-C` which appear in SYNOPSIS but are currently absent from the OPTIONS section. Run `mandoc -T lint man/pmlogsynth.1` and confirm no lint errors.
 
-- [ ] T013 Run `./pre-commit.sh` and confirm it exits 0: mandoc lint ✅, ruff ✅, mypy ✅, Tier 1 tests (includes all 6 schema context tests) ✅, Tier 2 integration tests ✅. Do not push until this is green.
+- [X] T013 Run `./pre-commit.sh` and confirm it exits 0: mandoc lint ✅, ruff ✅, mypy ✅, Tier 1 tests (includes all 6 schema context tests) ✅, Tier 2 integration tests ✅. Do not push until this is green.
 
 ---
 

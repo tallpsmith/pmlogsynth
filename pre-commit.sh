@@ -1,21 +1,109 @@
 #!/usr/bin/env bash
-set -e
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+
+check_prerequisites() {
+    local MISSING=()
+    local platform
+    platform=$(uname -s)
+
+    if [ -z "$VIRTUAL_ENV" ]; then
+        if [ "$platform" = "Darwin" ]; then
+            MISSING+=("MISSING: no virtualenv active
+  pre-commit.sh requires a Python virtualenv created from pmpython.
+  Fix (macOS):  \$(readlink -f \$(which pmpython)) -m venv .venv && source .venv/bin/activate")
+        else
+            MISSING+=("MISSING: no virtualenv active
+  pre-commit.sh requires a Python virtualenv created from pmpython.
+  Fix (Linux):  python3 -m venv .venv && source .venv/bin/activate")
+        fi
+    fi
+
+    for tool in ruff mypy pytest; do
+        if ! command -v "$tool" > /dev/null 2>&1; then
+            MISSING+=("MISSING: $tool not found
+  Fix:  pip install -e \".[dev]\"")
+        fi
+    done
+
+    if ! command -v pmpython > /dev/null 2>&1; then
+        if [ "$platform" = "Darwin" ]; then
+            MISSING+=("MISSING: pmpython not on PATH
+  PCP is a hard dependency. Install it first.
+  Fix (macOS):  brew install pcp")
+        else
+            MISSING+=("MISSING: pmpython not on PATH
+  PCP is a hard dependency. Install it first.
+  Fix (Debian/Ubuntu):  sudo apt-get install pcp python3-pcp
+  Fix (RHEL/Fedora):    sudo dnf install pcp python3-pcp")
+        fi
+    fi
+
+    if ! python3 -c "import cpmapi" > /dev/null 2>&1; then
+        MISSING+=("MISSING: cpmapi not importable
+  Create venv from pmpython:  \$(readlink -f \$(which pmpython)) -m venv .venv")
+    fi
+
+    if ! python3 -c "import pcp.pmi" > /dev/null 2>&1; then
+        MISSING+=("MISSING: pcp.pmi not importable
+  Create venv from pmpython:  \$(readlink -f \$(which pmpython)) -m venv .venv")
+    fi
+
+    if [ ${#MISSING[@]} -gt 0 ]; then
+        echo "=== prerequisite check failed ==="
+        echo ""
+        for item in "${MISSING[@]}"; do
+            echo "$item"
+            echo ""
+        done
+        exit 1
+    fi
+}
+
+check_man_page() {
+    local man_file="$SCRIPT_DIR/man/pmlogsynth.1"
+
+    if [ ! -f "$man_file" ]; then
+        echo "ERROR: man/pmlogsynth.1 not found" >&2
+        return 1
+    fi
+
+    if command -v mandoc > /dev/null 2>&1; then
+        mandoc -T lint "$man_file" > /dev/null 2>&1
+        return $?
+    fi
+
+    if command -v groff > /dev/null 2>&1; then
+        local groff_stderr
+        groff_stderr=$(groff -man -T utf8 "$man_file" 2>&1 > /dev/null)
+        if echo "$groff_stderr" | grep -qi "error"; then
+            echo "$groff_stderr" >&2
+            return 1
+        fi
+        return 0
+    fi
+
+    echo "WARNING: mandoc/groff not found — skipping roff syntax check (file exists)" >&2
+    return 0
+}
+
+check_prerequisites
 
 echo "=== man page check ==="
-man ./man/pmlogsynth.1 || exit 1
+check_man_page || exit 1
 
 echo "=== ruff check ==="
-ruff check .
+ruff check . || exit 1
 
 echo "=== mypy ==="
-mypy pmlogsynth/
+mypy pmlogsynth/ || exit 1
 
 echo "=== Unit + Integration tests ==="
-pytest tests/unit/ tests/integration/ -v
+pytest tests/unit/ tests/integration/ -v || exit 1
 
 if python3 -c "import pcp.pmi" 2>/dev/null; then
     echo "=== E2E tests (PCP available) ==="
-    pytest tests/e2e/ -v
+    pytest tests/e2e/ -v || exit 1
 else
     echo "WARNING: PCP library not available — E2E tests skipped"
 fi

@@ -1,0 +1,20 @@
+# spike.yml
+meta:
+  hostname: demo-host
+  timezone: UTC
+  duration: 600
+  interval: 60
+
+host:
+  profile: generic-small
+
+phases:
+  - name: baseline
+    duration: 300
+    cpu:
+      utilization: 0.15
+
+  - name: spike
+    duration: 300
+    cpu:
+      utilization: 0.90

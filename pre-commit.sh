@@ -2,19 +2,41 @@
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
+QUIET=false
+[[ "${1:-}" == "-q" ]] && QUIET=true
+
+PASSED=()
+
+# Runs a named check silently.  On failure: dumps captured output (unless -q)
+# and exits.  On success: records label for the summary.
+run_check() {
+    local label="$1"; shift
+    local out rc
+    out=$("$@" 2>&1)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        $QUIET || printf '%s\n' "$out"
+        exit $rc
+    fi
+    PASSED+=("✓ $label")
+}
+
+print_summary() {
+    $QUIET && return
+    printf 'pre-commit passed\n'
+    for line in "${PASSED[@]}"; do
+        printf '  %s\n' "$line"
+    done
+}
+
 check_prerequisites() {
     local MISSING=()
     local platform
     platform=$(uname -s)
 
     if [ -z "$VIRTUAL_ENV" ]; then
-        if [ "$platform" = "Darwin" ]; then
-            MISSING+=("MISSING: no virtualenv active
+        MISSING+=("MISSING: no virtualenv active
   Fix:  ./setup-venv.sh && source .venv/bin/activate")
-        else
-            MISSING+=("MISSING: no virtualenv active
-  Fix:  ./setup-venv.sh && source .venv/bin/activate")
-        fi
     fi
 
     for tool in ruff mypy pytest; do
@@ -81,29 +103,20 @@ check_man_page() {
         return 0
     fi
 
-    echo "WARNING: mandoc/groff not found — skipping roff syntax check (file exists)" >&2
     return 0
 }
 
 check_prerequisites
 
-echo "=== man page check ==="
-check_man_page || exit 1
-
-echo "=== ruff check ==="
-ruff check . || exit 1
-
-echo "=== mypy ==="
-mypy pmlogsynth/ || exit 1
-
-echo "=== Unit + Integration tests ==="
-pytest tests/unit/ tests/integration/ -v || exit 1
+run_check "man page"                  check_man_page
+run_check "ruff"                      ruff check .
+run_check "mypy"                      mypy pmlogsynth/
+run_check "unit + integration tests"  pytest tests/unit/ tests/integration/
 
 if python3 -c "import pcp.pmi" 2>/dev/null; then
-    echo "=== E2E tests (PCP available) ==="
-    pytest tests/e2e/ -v || exit 1
+    run_check "E2E tests" pytest tests/e2e/
 else
-    echo "WARNING: PCP library not available — E2E tests skipped"
+    PASSED+=("- E2E skipped (no pcp.pmi)")
 fi
 
-echo "=== All checks passed ==="
+print_summary

@@ -44,13 +44,9 @@ def make_uname_stub(directory: Path) -> None:
     stub.chmod(0o755)
 
 
-def run_script(env: dict) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["/bin/bash", str(SCRIPT)],
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+def run_script(env: dict, args: list = None) -> subprocess.CompletedProcess:
+    cmd = ["/bin/bash", str(SCRIPT)] + (args or [])
+    return subprocess.run(cmd, env=env, capture_output=True, text=True)
 
 
 def base_env(tmp_path: Path) -> tuple:
@@ -219,6 +215,63 @@ class TestAllPrerequisitesSatisfied:
         result = run_script(self._build_env(tmp_path))
         assert "MISSING:" not in result.stdout
 
-    def test_man_page_check_gate_is_attempted(self, tmp_path):
+    def test_summary_shown_on_success(self, tmp_path):
         result = run_script(self._build_env(tmp_path))
-        assert "man page check" in result.stdout
+        assert "pre-commit passed" in result.stdout
+
+
+class TestSummaryOutput:
+    """Default mode: clean summary with ✓ lines, no tool banner noise."""
+
+    def _build_env(self, tmp_path):
+        env, bin_dir = base_env(tmp_path)
+        env["VIRTUAL_ENV"] = str(tmp_path / ".venv")
+        for tool in ("ruff", "mypy", "pytest", "pmpython"):
+            make_stub(bin_dir, tool)
+        make_python3_stub(bin_dir, cpmapi_ok=True, pcp_pmi_ok=True)
+        return env
+
+    def test_summary_header_present(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "pre-commit passed" in result.stdout
+
+    def test_summary_includes_man_page(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "✓ man page" in result.stdout
+
+    def test_summary_includes_ruff(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "✓ ruff" in result.stdout
+
+    def test_summary_includes_mypy(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "✓ mypy" in result.stdout
+
+    def test_summary_includes_tests(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "✓ unit + integration tests" in result.stdout
+
+    def test_no_tool_banner_noise(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "=== ruff check ===" not in result.stdout
+        assert "=== mypy ===" not in result.stdout
+
+
+class TestQuietMode:
+    """-q flag: no stdout on success, just exit code."""
+
+    def _build_env(self, tmp_path):
+        env, bin_dir = base_env(tmp_path)
+        env["VIRTUAL_ENV"] = str(tmp_path / ".venv")
+        for tool in ("ruff", "mypy", "pytest", "pmpython"):
+            make_stub(bin_dir, tool)
+        make_python3_stub(bin_dir, cpmapi_ok=True, pcp_pmi_ok=True)
+        return env
+
+    def test_exits_zero_on_success(self, tmp_path):
+        result = run_script(self._build_env(tmp_path), args=["-q"])
+        assert result.returncode == 0
+
+    def test_no_stdout_on_success(self, tmp_path):
+        result = run_script(self._build_env(tmp_path), args=["-q"])
+        assert result.stdout == ""

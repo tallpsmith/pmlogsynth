@@ -164,9 +164,9 @@ class TestManPageValidMandoc:
             text=True,
         )
 
-    def test_man_page_check_gate_mentioned(self, tmp_path):
+    def test_man_page_check_in_summary(self, tmp_path):
         result = self._run(tmp_path)
-        assert "man page check" in result.stdout
+        assert "✓ man page" in result.stdout
 
     def test_no_mandate_error_in_stderr(self, tmp_path):
         result = self._run(tmp_path)
@@ -196,7 +196,7 @@ class TestManPageInvalidMandoc:
             capture_output=True,
             text=True,
         )
-        assert result.returncode == 1
+        assert result.returncode != 0
 
 
 class TestManPageNoFormatter:
@@ -252,7 +252,9 @@ class TestManPageNoFormatter:
         # existence-only pass: must not exit 1
         assert result.returncode != 1 or "WARNING" in result.stderr
 
-    def test_warning_message_on_stderr(self, tmp_path):
+    def test_passes_silently_when_no_formatter(self, tmp_path):
+        # No formatter = existence-only check; passes and appears in summary.
+        # The old WARNING was captured and swallowed by run_check's 2>&1.
         result = self._run(tmp_path)
-        assert "WARNING" in result.stderr
-        assert "mandoc" in result.stderr or "groff" in result.stderr
+        assert result.returncode == 0
+        assert "✓ man page" in result.stdout

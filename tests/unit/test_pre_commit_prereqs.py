@@ -299,6 +299,11 @@ class TestSummaryOutput:
         result = run_script(self._build_env(tmp_path))
         assert "✓ unit + integration tests" in result.stdout
 
+    def test_progress_indicator_shown(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        assert "→ ruff" in result.stdout
+        assert "→ mypy" in result.stdout
+
     def test_no_tool_banner_noise(self, tmp_path):
         result = run_script(self._build_env(tmp_path))
         assert "=== ruff check ===" not in result.stdout

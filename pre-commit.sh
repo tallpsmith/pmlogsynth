@@ -13,12 +13,12 @@ fi
 QUIET=false
 [[ "${1:-}" == "-q" ]] && QUIET=true
 
-PASSED=()
-
-# Runs a named check silently.  On failure: dumps captured output (unless -q)
-# and exits.  On success: records label for the summary.
+# Prints a progress line before running, then ✓ on success so the user sees
+# live activity instead of silence during long-running checks.  On failure:
+# dumps captured output (unless -q) and exits.
 run_check() {
     local label="$1"; shift
+    $QUIET || printf '  → %s...\n' "$label"
     local out rc
     out=$("$@" 2>&1)
     rc=$?
@@ -26,15 +26,12 @@ run_check() {
         $QUIET || printf '%s\n' "$out"
         exit $rc
     fi
-    PASSED+=("✓ $label")
+    $QUIET || printf '  ✓ %s\n' "$label"
 }
 
 print_summary() {
     $QUIET && return
     printf 'pre-commit passed\n'
-    for line in "${PASSED[@]}"; do
-        printf '  %s\n' "$line"
-    done
 }
 
 check_prerequisites() {
@@ -119,7 +116,7 @@ run_check "unit + integration tests"  pytest tests/unit/ tests/integration/
 if python3 -c "import pcp.pmi" 2>/dev/null; then
     run_check "E2E tests" pytest tests/e2e/
 else
-    PASSED+=("- E2E skipped (no pcp.pmi)")
+    $QUIET || printf '  - E2E skipped (no pcp.pmi)\n'
 fi
 
 print_summary

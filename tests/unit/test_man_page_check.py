@@ -198,6 +198,30 @@ class TestManPageInvalidMandoc:
         )
         assert result.returncode != 0
 
+    def test_error_output_surfaced_not_swallowed(self, tmp_path):
+        # The blank-line bug: check_man_page redirected mandoc output to
+        # /dev/null internally, so run_check had nothing to show on failure.
+        # Mandoc errors must reach the user, not disappear silently.
+        env = all_prereqs_env(tmp_path, tmp_path)
+        bin_dir = tmp_path / "bin"
+        make_mandoc_stub(bin_dir, exit_code=3, stderr_msg="pmlogsynth.1:5: skipping bad macro")
+
+        script_copy = tmp_path / "pre-commit.sh"
+        script_copy.write_text(SCRIPT.read_text())
+        script_copy.chmod(0o755)
+
+        man_dir = tmp_path / "man"
+        man_dir.mkdir()
+        (man_dir / "pmlogsynth.1").write_text(_INVALID_ROFF)
+
+        result = subprocess.run(
+            ["bash", str(script_copy)],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        assert "skipping bad macro" in result.stdout or "skipping bad macro" in result.stderr
+
 
 class TestManPageNoFormatter:
     """No mandoc or groff available → exit 0 with WARNING, never blocks."""

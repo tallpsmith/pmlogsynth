@@ -89,18 +89,13 @@ check_man_page() {
     fi
 
     if command -v mandoc > /dev/null 2>&1; then
-        mandoc -T lint "$man_file" > /dev/null 2>&1
+        mandoc -T lint "$man_file"
         return $?
     fi
 
     if command -v groff > /dev/null 2>&1; then
-        local groff_stderr
-        groff_stderr=$(groff -man -T utf8 "$man_file" 2>&1 > /dev/null)
-        if echo "$groff_stderr" | grep -qi "error"; then
-            echo "$groff_stderr" >&2
-            return 1
-        fi
-        return 0
+        groff -man -T utf8 "$man_file" > /dev/null
+        return $?
     fi
 
     return 0

@@ -103,4 +103,16 @@ First-time setup (macOS):
 ```
 
 Never commit without a green `./pre-commit.sh`.
+
+## Archive Output Convention
+
+All locally generated PCP archives go in `generated-archives/` (gitignored).
+Never generate archives to the project root or ad-hoc paths.
+
+```bash
+pmlogsynth -o ./generated-archives/spike spike.yml
+pmstat -a ./generated-archives/spike
+```
+
+See `docs/pcp-tools.md` for the full PCP toolkit reference and validation workflow.
 <!-- MANUAL ADDITIONS END -->

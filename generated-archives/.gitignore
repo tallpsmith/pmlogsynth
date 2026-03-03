@@ -1,0 +1,4 @@
+# Ignore all generated PCP archives in this directory.
+# The directory itself is tracked; its contents are not.
+*
+!.gitignore

@@ -158,7 +158,7 @@ def test_per_cpu_instance_count_1cpu() -> None:
 
 
 def test_zero_utilization_all_idle() -> None:
-    """With 0% utilization, all active ticks are 0 and idle dominates."""
+    """With 0% utilization, all active ticks are 0 and idle owns everything."""
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     sampler = make_sampler(noise=0.0)
@@ -171,8 +171,8 @@ def test_zero_utilization_all_idle() -> None:
     assert result["kernel.all.cpu.sys"][None] == 0
     assert result["kernel.all.cpu.wait.total"][None] == 0
     assert result["kernel.all.cpu.steal"][None] == 0
-    # idle should be 0 too since total_ticks=0
-    assert result["kernel.all.cpu.idle"][None] == 0
+    # idle = all ticks (4 cpus * 60s * 1000ms)
+    assert result["kernel.all.cpu.idle"][None] == 4 * 60 * 1000
 
 
 def test_full_utilization_idle_near_zero() -> None:
@@ -202,11 +202,12 @@ def test_no_stressor_uses_defaults() -> None:
 
     result = model.compute(None, hw, interval=60, sampler=sampler)
 
-    # Default utilization is 0.0 — all values should be 0
+    # Default utilization is 0.0 — busy ticks are 0, idle owns everything
     assert isinstance(result, dict)
     assert "kernel.all.cpu.user" in result
     assert "kernel.all.cpu.idle" in result
     assert result["kernel.all.cpu.user"][None] == 0
+    assert result["kernel.all.cpu.idle"][None] == 4 * 60 * 1000
 
 
 def test_noise_zero_deterministic() -> None:
@@ -306,3 +307,83 @@ def test_steal_always_zero() -> None:
     result2 = model.compute(stressor, hw, interval=60, sampler=sampler)
 
     assert result2["kernel.all.cpu.steal"][None] == 0
+
+
+# ---------------------------------------------------------------------------
+# idle correctness — the core invariant that makes pmstat show real utilization
+# ---------------------------------------------------------------------------
+
+
+def test_partial_utilization_idle_is_dominant() -> None:
+    """At 15% utilization, idle ticks must exceed user+sys+iowait combined.
+
+    Without this, pmstat shows the same ratio (70/20/10) at every utilization
+    level and the spike is invisible.
+    """
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(
+        utilization=0.15,
+        user_ratio=0.70,
+        sys_ratio=0.20,
+        iowait_ratio=0.10,
+        noise=0.0,
+    )
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    idle = result["kernel.all.cpu.idle"][None]
+    user = result["kernel.all.cpu.user"][None]
+    sys_ = result["kernel.all.cpu.sys"][None]
+    iowait = result["kernel.all.cpu.wait.total"][None]
+
+    assert idle > user + sys_ + iowait, (
+        "At 15% utilization idle should dominate; "
+        "got idle={} user={} sys={} iowait={}".format(idle, user, sys_, iowait)
+    )
+
+
+def test_spike_has_less_idle_than_baseline() -> None:
+    """90% utilization produces far fewer idle ticks than 15% utilization."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=1)
+    interval = 60
+
+    sampler_base = make_sampler(noise=0.0)
+    base_result = model.compute(
+        CpuStressor(utilization=0.15, noise=0.0), hw, interval=interval, sampler=sampler_base
+    )
+
+    sampler_spike = make_sampler(noise=0.0)
+    spike_result = model.compute(
+        CpuStressor(utilization=0.90, noise=0.0), hw, interval=interval, sampler=sampler_spike
+    )
+
+    base_idle = base_result["kernel.all.cpu.idle"][None]
+    spike_idle = spike_result["kernel.all.cpu.idle"][None]
+
+    assert base_idle > spike_idle, (
+        "Baseline idle ({}) should exceed spike idle ({})".format(base_idle, spike_idle)
+    )
+
+
+def test_idle_plus_busy_equals_all_ticks() -> None:
+    """idle + user + sys + iowait must equal num_cpus * interval * 1000 ms."""
+    model = CpuMetricModel()
+    hw = make_hw(cpus=4)
+    sampler = make_sampler(noise=0.0)
+    stressor = CpuStressor(utilization=0.60, noise=0.0)
+    interval = 60
+
+    result = model.compute(stressor, hw, interval=interval, sampler=sampler)
+
+    all_ticks_ms = hw.cpus * interval * 1000
+    total = (
+        result["kernel.all.cpu.user"][None]
+        + result["kernel.all.cpu.sys"][None]
+        + result["kernel.all.cpu.idle"][None]
+        + result["kernel.all.cpu.wait.total"][None]
+        + result["kernel.all.cpu.steal"][None]
+    )
+    assert total == all_ticks_ms, "Expected {} ms total, got {}".format(all_ticks_ms, total)

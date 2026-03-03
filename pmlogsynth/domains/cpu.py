@@ -114,15 +114,19 @@ class CpuMetricModel(MetricModel):
         noisy_util = max(0.0, min(1.0, noisy_util))
 
         num_cpus = hardware.cpus
-        # Total CPU ticks across all CPUs in this interval (in milliseconds)
-        total_ticks_ms = noisy_util * num_cpus * interval * 1000
+        # All CPU ticks across all CPUs in this interval (in milliseconds)
+        all_ticks_ms = num_cpus * interval * 1000
+        # Busy ticks scaled by utilization
+        busy_ticks_ms = noisy_util * all_ticks_ms
 
         # Compute aggregate breakdown
-        user_ms = total_ticks_ms * user_ratio
-        sys_ms = total_ticks_ms * sys_ratio
-        iowait_ms = total_ticks_ms * iowait_ratio
+        user_ms = busy_ticks_ms * user_ratio
+        sys_ms = busy_ticks_ms * sys_ratio
+        iowait_ms = busy_ticks_ms * iowait_ratio
         steal_ms = 0.0
-        idle_ms = max(0.0, total_ticks_ms - user_ms - sys_ms - iowait_ms - steal_ms)
+        # Idle is the remaining time from ALL ticks, not just busy ticks.
+        # Without this, ratios are identical at every utilization level.
+        idle_ms = max(0.0, all_ticks_ms - user_ms - sys_ms - iowait_ms - steal_ms)
 
         # Accumulate aggregate counters
         result: Dict[str, Dict[Optional[str], Any]] = {
@@ -154,7 +158,7 @@ class CpuMetricModel(MetricModel):
             cpu_steal = steal_ms * split
             cpu_idle = max(
                 0.0,
-                (total_ticks_ms * split) - cpu_user - cpu_sys - cpu_iowait - cpu_steal,
+                (all_ticks_ms * split) - cpu_user - cpu_sys - cpu_iowait - cpu_steal,
             )
 
             per_cpu_user[cpu_key] = sampler.accumulate("percpu.user.{}".format(i), cpu_user)

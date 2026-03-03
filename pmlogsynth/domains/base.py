@@ -19,6 +19,7 @@ class MetricDescriptor:
     sem: int                              # PM_SEM_* constant value
     # args to pmiUnits(dimSpace, dimTime, dimCount, scaleSpace, scaleTime, scaleCount)
     units: Tuple[int, int, int, int, int, int]
+    is_discrete: bool = False             # emit once at archive open, skip per-sample loop
 
 
 class MetricModel(ABC):

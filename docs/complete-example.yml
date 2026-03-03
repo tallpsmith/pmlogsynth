@@ -18,17 +18,28 @@ phases:
       iowait_ratio: 0.10
     memory:
       used_ratio: 0.40
+      cache_ratio: 0.30
+    disk:
+      read_mbps: 20.0
+      write_mbps: 10.0
 
   - name: ramp
     duration: 300
     transition: linear
     cpu:
       utilization: 0.80
+    memory:
+      used_ratio: 0.65
+    disk:
+      read_mbps: 200.0
+      write_mbps: 80.0
 
   - name: peak
     duration: 600
     cpu:
       utilization: 0.90
+    memory:
+      used_ratio: 0.80
     disk:
       read_mbps: 500.0
       write_mbps: 200.0

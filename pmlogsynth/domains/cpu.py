@@ -3,7 +3,14 @@
 from typing import Any, Dict, List, Optional
 
 from pmlogsynth.domains.base import MetricDescriptor, MetricModel
-from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_TYPE_U64, UNITS_MSEC
+from pmlogsynth.pcp_constants import (
+    PM_SEM_COUNTER,
+    PM_SEM_DISCRETE,
+    PM_TYPE_U32,
+    PM_TYPE_U64,
+    UNITS_MSEC,
+    UNITS_NONE,
+)
 from pmlogsynth.profile import CpuStressor, HardwareProfile
 from pmlogsynth.sampler import ValueSampler
 
@@ -17,9 +24,17 @@ _DEFAULT_SYS_RATIO = 0.20
 _DEFAULT_IOWAIT_RATIO = 0.10
 _DEFAULT_STEAL_RATIO = 0.0
 
+# Sub-metric carve fractions (proportion of parent bucket — Decision 3)
+_NICE_FRAC = 0.02
+_VUSER_FRAC = 0.015
+_VNICE_FRAC = 0.005
+_GUEST_FRAC = 0.01
+_GUEST_NICE_FRAC = 0.005
+_INTR_FRAC = 0.03  # carved from sys
+
 
 class CpuMetricModel(MetricModel):
-    """Generates kernel.all.cpu.* and kernel.percpu.cpu.* metrics."""
+    """Generates kernel.all.cpu.*, kernel.percpu.cpu.*, and hinv.ncpu metrics."""
 
     def metric_descriptors(self, hardware: HardwareProfile) -> List[MetricDescriptor]:
         cpu_indom = (60, _CPU_INDOM_SERIAL)
@@ -64,6 +79,66 @@ class CpuMetricModel(MetricModel):
                 indom=None,
                 sem=PM_SEM_COUNTER,
                 units=UNITS_MSEC,
+            ),
+            # Sub-metric carves from user bucket
+            MetricDescriptor(
+                name="kernel.all.cpu.nice",
+                pmid=(60, 0, 27),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            MetricDescriptor(
+                name="kernel.all.cpu.vuser",
+                pmid=(60, 0, 78),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            MetricDescriptor(
+                name="kernel.all.cpu.vnice",
+                pmid=(60, 0, 82),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            MetricDescriptor(
+                name="kernel.all.cpu.guest",
+                pmid=(60, 0, 60),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            MetricDescriptor(
+                name="kernel.all.cpu.guest_nice",
+                pmid=(60, 0, 81),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            # Sub-metric carved from sys bucket
+            MetricDescriptor(
+                name="kernel.all.cpu.intr",
+                pmid=(60, 0, 34),
+                type_code=PM_TYPE_U64,
+                indom=None,
+                sem=PM_SEM_COUNTER,
+                units=UNITS_MSEC,
+            ),
+            # Discrete hardware invariant — emitted once at archive open
+            MetricDescriptor(
+                name="hinv.ncpu",
+                pmid=(60, 0, 32),
+                type_code=PM_TYPE_U32,
+                indom=None,
+                sem=PM_SEM_DISCRETE,
+                units=UNITS_NONE,
+                is_discrete=True,
             ),
             # Per-CPU metrics
             MetricDescriptor(
@@ -119,22 +194,50 @@ class CpuMetricModel(MetricModel):
         # Busy ticks scaled by utilization
         busy_ticks_ms = noisy_util * all_ticks_ms
 
-        # Compute aggregate breakdown
+        # Compute parent buckets before carving
         user_ms = busy_ticks_ms * user_ratio
         sys_ms = busy_ticks_ms * sys_ratio
         iowait_ms = busy_ticks_ms * iowait_ratio
         steal_ms = 0.0
+
+        # Carve sub-metrics from user bucket (Decision 3)
+        nice_ms = user_ms * _NICE_FRAC
+        vuser_ms = user_ms * _VUSER_FRAC
+        vnice_ms = user_ms * _VNICE_FRAC
+        guest_ms = user_ms * _GUEST_FRAC
+        guest_nice_ms = user_ms * _GUEST_NICE_FRAC
+        user_carved = nice_ms + vuser_ms + vnice_ms + guest_ms + guest_nice_ms
+
+        # Carve intr from sys bucket
+        intr_ms = sys_ms * _INTR_FRAC
+
+        # Reduce parent buckets by carved amounts — preserves total budget
+        user_emitted_ms = user_ms - user_carved
+        sys_emitted_ms = sys_ms - intr_ms
+
         # Idle is the remaining time from ALL ticks, not just busy ticks.
-        # Without this, ratios are identical at every utilization level.
-        idle_ms = max(0.0, all_ticks_ms - user_ms - sys_ms - iowait_ms - steal_ms)
+        idle_ms = max(
+            0.0,
+            all_ticks_ms - user_emitted_ms - sys_emitted_ms - iowait_ms - steal_ms
+            - nice_ms - vuser_ms - vnice_ms - guest_ms - guest_nice_ms - intr_ms,
+        )
 
         # Accumulate aggregate counters
         result: Dict[str, Dict[Optional[str], Any]] = {
-            "kernel.all.cpu.user": {None: sampler.accumulate("all.cpu.user", user_ms)},
-            "kernel.all.cpu.sys": {None: sampler.accumulate("all.cpu.sys", sys_ms)},
+            "kernel.all.cpu.user": {None: sampler.accumulate("all.cpu.user", user_emitted_ms)},
+            "kernel.all.cpu.sys": {None: sampler.accumulate("all.cpu.sys", sys_emitted_ms)},
             "kernel.all.cpu.idle": {None: sampler.accumulate("all.cpu.idle", idle_ms)},
             "kernel.all.cpu.wait.total": {None: sampler.accumulate("all.cpu.wait", iowait_ms)},
             "kernel.all.cpu.steal": {None: sampler.accumulate("all.cpu.steal", steal_ms)},
+            "kernel.all.cpu.nice": {None: sampler.accumulate("all.cpu.nice", nice_ms)},
+            "kernel.all.cpu.vuser": {None: sampler.accumulate("all.cpu.vuser", vuser_ms)},
+            "kernel.all.cpu.vnice": {None: sampler.accumulate("all.cpu.vnice", vnice_ms)},
+            "kernel.all.cpu.intr": {None: sampler.accumulate("all.cpu.intr", intr_ms)},
+            "kernel.all.cpu.guest": {None: sampler.accumulate("all.cpu.guest", guest_ms)},
+            "kernel.all.cpu.guest_nice": {
+                None: sampler.accumulate("all.cpu.guest_nice", guest_nice_ms)
+            },
+            "hinv.ncpu": {None: hardware.cpus},
         }
 
         # Per-CPU: distribute total ticks randomly across CPUs
@@ -152,8 +255,8 @@ class CpuMetricModel(MetricModel):
 
         for i, split in enumerate(splits):
             cpu_key = "cpu{}".format(i)
-            cpu_user = user_ms * split
-            cpu_sys = sys_ms * split
+            cpu_user = user_emitted_ms * split
+            cpu_sys = sys_emitted_ms * split
             cpu_iowait = iowait_ms * split
             cpu_steal = steal_ms * split
             cpu_idle = max(

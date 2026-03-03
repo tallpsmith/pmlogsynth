@@ -7,71 +7,78 @@
 
 ## Decision 1: PMID values for new metrics
 
-**Decision**: Use Linux PMDA (domain 60) and memory PMDA (domain 58) PMIDs consistent with the existing codebase. PMID item numbers below are derived from the PCP linux PMDA source and confirmed via `pminfo -d` where available on macOS.
+**Decision**: Use Linux PMDA (domain 60) and memory PMDA (domain 58) PMIDs consistent with the existing codebase. PMID item numbers below are verified from the PCP linux PMDA source (`src/pmdas/linux/pmda.c` on GitHub) and cross-checked where possible.
 
-**Rationale**: PMIDs must match the installed PCP PMDA exactly (Constitution I). The existing code uses hardcoded (domain, cluster, item) tuples; new metrics follow the same pattern. Metrics whose PMIDs cannot be confirmed on macOS are tagged `[VERIFY]` — they must be checked via `pminfo -d <metric>` on the Linux CI system before implementation.
+**Key constraint**: For pmlogsynth-generated archives, PMIDs only need to be *unique within the archive* — pmrep reads archives by metric name and uses the archive's own PMNS. The PMID does not need to match the live PMDA. The existing code already uses domain 58 for `mem.util.*` (real PMDA uses domain 60) and cluster 5 for `disk.dev.*` (real PMDA uses cluster 0 = CLUSTER_STAT), and these work fine. New metrics follow the same internal conventions to avoid conflicts.
 
-**Alternatives considered**: Using `pmLookupName()` at runtime to resolve PMIDs dynamically. Rejected: adds startup latency and a running `pmcd` dependency (Constitution V — no running pmcd allowed).
+**Rationale for hardcoding**: `pmLookupName()` at runtime requires a running `pmcd` — rejected (Constitution V).
 
 ### cpu.py new metrics (domain 60, cluster 0)
 
+All in CLUSTER_STAT (0), same as existing kernel.all.cpu.user/sys/idle. Item numbers verified from PCP source.
+
 | Metric | PMID | Type | Sem | Units | Notes |
 |--------|------|------|-----|-------|-------|
-| `kernel.all.cpu.nice` | (60, 0, 27) | U64 | counter | UNITS_MSEC | Confirmed via pminfo |
-| `kernel.all.cpu.vuser` | (60, 0, 56) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `kernel.all.cpu.vnice` | (60, 0, 57) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `kernel.all.cpu.intr` | (60, 0, 55) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `kernel.all.cpu.guest` | (60, 0, 59) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `kernel.all.cpu.guest_nice` | (60, 0, 60) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `hinv.ncpu` | (60, 0, 1) | U32 | discrete | UNITS_NONE | `[VERIFY]`; is_discrete=True |
+| `kernel.all.cpu.nice` | (60, 0, 27) | U64 | counter | UNITS_MSEC | Item 27 confirmed consistent with existing (idle=21, user=20, sys=22) |
+| `kernel.all.cpu.vuser` | (60, 0, 78) | U64 | counter | UNITS_MSEC | Verified from PCP source (was 56 — wrong) |
+| `kernel.all.cpu.vnice` | (60, 0, 82) | U64 | counter | UNITS_MSEC | Verified from PCP source (was 57 — wrong) |
+| `kernel.all.cpu.intr` | (60, 0, 34) | U64 | counter | UNITS_MSEC | Verified from PCP source (was 55 — wrong) |
+| `kernel.all.cpu.guest` | (60, 0, 60) | U64 | counter | UNITS_MSEC | Verified from PCP source (was 59 — wrong) |
+| `kernel.all.cpu.guest_nice` | (60, 0, 81) | U64 | counter | UNITS_MSEC | Verified from PCP source (was 60 — conflicted with guest) |
+| `hinv.ncpu` | (60, 0, 32) | U32 | discrete | UNITS_NONE | Verified from PCP source (was 1 — wrong); is_discrete=True |
 
-> Verification command: `pminfo -d kernel.all.cpu.vuser kernel.all.cpu.vnice kernel.all.cpu.intr kernel.all.cpu.guest kernel.all.cpu.guest_nice hinv.ncpu kernel.all.cpu.nice`
+> Linux verification: `pminfo -d kernel.all.cpu.vuser kernel.all.cpu.vnice kernel.all.cpu.intr kernel.all.cpu.guest kernel.all.cpu.guest_nice hinv.ncpu kernel.all.cpu.nice`
 
 ### system.py new metrics (domain 60, cluster 0)
 
+All in CLUSTER_STAT (0). Item numbers verified from PCP source.
+
 | Metric | PMID | Type | Sem | Units | Notes |
 |--------|------|------|-----|-------|-------|
-| `kernel.all.intr` | (60, 0, 3) | U32 | counter | UNITS_COUNT | `[VERIFY]` |
-| `kernel.all.pswitch` | (60, 0, 7) | U32 | counter | UNITS_COUNT | `[VERIFY]` |
-| `kernel.all.running` | (60, 0, 32) | U32 | instant | UNITS_COUNT | `[VERIFY]` |
-| `kernel.all.blocked` | (60, 0, 33) | U32 | instant | UNITS_COUNT | `[VERIFY]` |
+| `kernel.all.intr` | (60, 0, 12) | U32 | counter | UNITS_COUNT | Verified from PCP source (was 3 — wrong) |
+| `kernel.all.pswitch` | (60, 0, 7) | U32 | counter | UNITS_COUNT | `[VERIFY on Linux]` — sources conflict (7 vs 13) |
+| `kernel.all.running` | (60, 0, 15) | U32 | instant | UNITS_COUNT | Verified from PCP source (was 32 — conflicted with hinv.ncpu) |
+| `kernel.all.blocked` | (60, 0, 16) | U32 | instant | UNITS_COUNT | Verified from PCP source (was 33 — wrong) |
 
-> Verification command: `pminfo -d kernel.all.intr kernel.all.pswitch kernel.all.running kernel.all.blocked`
+> Linux verification: `pminfo -md kernel.all.intr kernel.all.pswitch kernel.all.running kernel.all.blocked`
 
-### memory.py new metrics
+### memory.py new metrics (domain 58, cluster 0 — consistent with existing memory.py)
 
-| Metric | Domain/PMID | Type | Sem | Units | Notes |
-|--------|------------|------|-----|-------|-------|
-| `mem.util.active` | (58, 0, 15) | U64 | instant | UNITS_KBYTE | Confirmed via pminfo |
-| `mem.util.inactive` | (58, 0, 16) | U64 | instant | UNITS_KBYTE | Confirmed via pminfo |
-| `mem.util.slab` | (58, 0, 12) | U64 | instant | UNITS_KBYTE | `[VERIFY]` |
-| `swap.used` | `[VERIFY]` | U64 | instant | UNITS_KBYTE | Confirmed type via pminfo |
-| `swap.pagesin` | `[VERIFY]` | PM_TYPE_32 | counter | UNITS_COUNT | "32-bit int" per pminfo |
-| `swap.pagesout` | `[VERIFY]` | PM_TYPE_32 | counter | UNITS_COUNT | "32-bit int" per pminfo |
-| `mem.vmstat.pgpgin` | `[VERIFY]` | U32 | counter | UNITS_COUNT | `[VERIFY]` type also |
-| `mem.vmstat.pgpgout` | `[VERIFY]` | U32 | counter | UNITS_COUNT | `[VERIFY]` type also |
+Existing memory.py uses domain 58 cluster 0 for mem.util.*. New metrics follow the same convention. Items chosen to avoid conflicts with existing: {0, 2, 4, 6, 13} are taken.
 
-> Verification command: `pminfo -d mem.util.slab swap.used swap.pagesin swap.pagesout mem.vmstat.pgpgin mem.vmstat.pgpgout`
-> Note: `swap.pagesin/pagesout` may be in linux PMDA (domain 60) rather than domain 58 — pminfo resolves this.
+| Metric | PMID | Type | Sem | Units | Notes |
+|--------|------|------|-----|-------|-------|
+| `mem.util.active` | (58, 0, 15) | U64 | instant | UNITS_KBYTE | No conflict with existing items |
+| `mem.util.inactive` | (58, 0, 16) | U64 | instant | UNITS_KBYTE | No conflict |
+| `mem.util.slab` | (58, 0, 12) | U64 | instant | UNITS_KBYTE | No conflict |
+| `swap.used` | (58, 1, 0) | U64 | instant | UNITS_KBYTE | Cluster 1 = new swap cluster; type confirmed via `pminfo` |
+| `swap.pagesin` | (58, 1, 1) | PM_TYPE_32 | counter | UNITS_COUNT | Type confirmed: "32-bit int" via `pminfo` |
+| `swap.pagesout` | (58, 1, 2) | PM_TYPE_32 | counter | UNITS_COUNT | Type confirmed: "32-bit int" via `pminfo` |
+| `mem.vmstat.pgpgin` | (58, 2, 0) | U32 | counter | UNITS_COUNT | Cluster 2 = new vmstat cluster; `[VERIFY type on Linux]` |
+| `mem.vmstat.pgpgout` | (58, 2, 1) | U32 | counter | UNITS_COUNT | `[VERIFY type on Linux]` |
 
-### disk.py new metrics (domain 60, cluster 5; indom (60, 1))
+> Linux verification: `pminfo -md mem.util.slab swap.used swap.pagesin swap.pagesout mem.vmstat.pgpgin mem.vmstat.pgpgout`
+
+### disk.py new metrics (domain 60, cluster 5; indom (60, 1) — consistent with existing disk.py)
+
+Existing disk.py uses cluster 5 for `disk.dev.*`. New metrics extend this cluster. Items chosen to avoid conflicts with existing disk.dev.read_bytes (item 5) and disk.dev.write_bytes (item 6).
 
 `disk.dev.secactive` is a **derived** metric computed by pmrep via `instant(disk.dev.avactive)` — we do NOT need to emit it directly. Only `disk.dev.avactive` is required.
 
 | Metric | PMID | Type | Sem | Units | Notes |
 |--------|------|------|-----|-------|-------|
-| `disk.dev.read` | (60, 5, 0) | U64 | counter | UNITS_COUNT | Confirmed type via pminfo |
-| `disk.dev.write` | (60, 5, 1) | U64 | counter | UNITS_COUNT | Confirmed type via pminfo |
-| `disk.dev.read_merge` | (60, 5, 2) | U64 | counter | UNITS_COUNT | `[VERIFY]` item number |
-| `disk.dev.write_merge` | (60, 5, 3) | U64 | counter | UNITS_COUNT | `[VERIFY]` item number |
-| `disk.dev.blkread` | (60, 5, 7) | U64 | counter | UNITS_COUNT | Confirmed type; `[VERIFY]` item |
-| `disk.dev.blkwrite` | (60, 5, 8) | U64 | counter | UNITS_COUNT | `[VERIFY]` item |
-| `disk.dev.read_rawactive` | (60, 5, 9) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `disk.dev.write_rawactive` | (60, 5, 10) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
-| `disk.dev.avg_qlen` | (60, 5, 11) | DOUBLE | instant | UNITS_NONE | Confirmed type via pminfo |
-| `disk.dev.avactive` | (60, 5, 12) | U64 | counter | UNITS_MSEC | `[VERIFY]` |
+| `disk.dev.read` | (60, 5, 0) | U64 | counter | UNITS_COUNT | Item 0 — no conflict |
+| `disk.dev.write` | (60, 5, 1) | U64 | counter | UNITS_COUNT | Item 1 — no conflict |
+| `disk.dev.read_merge` | (60, 5, 2) | U64 | counter | UNITS_COUNT | Item 2 — no conflict |
+| `disk.dev.write_merge` | (60, 5, 3) | U64 | counter | UNITS_COUNT | Item 3 — no conflict |
+| `disk.dev.blkread` | (60, 5, 7) | U64 | counter | UNITS_COUNT | Item 7 — avoids existing items 5, 6 |
+| `disk.dev.blkwrite` | (60, 5, 8) | U64 | counter | UNITS_COUNT | Item 8 |
+| `disk.dev.read_rawactive` | (60, 5, 9) | U64 | counter | UNITS_MSEC | Item 9 — `[VERIFY type on Linux]` |
+| `disk.dev.write_rawactive` | (60, 5, 10) | U64 | counter | UNITS_MSEC | Item 10 — `[VERIFY type on Linux]` |
+| `disk.dev.avg_qlen` | (60, 5, 11) | DOUBLE | instant | UNITS_NONE | Item 11 — type confirmed via `pminfo` |
+| `disk.dev.avactive` | (60, 5, 12) | U64 | counter | UNITS_MSEC | Item 12 — `[VERIFY type on Linux]` |
 
-> Verification command: `pminfo -d disk.dev.read disk.dev.write disk.dev.read_merge disk.dev.write_merge disk.dev.blkread disk.dev.blkwrite disk.dev.read_rawactive disk.dev.write_rawactive disk.dev.avg_qlen disk.dev.avactive`
+> Linux verification: `pminfo -md disk.dev.read disk.dev.write disk.dev.read_merge disk.dev.write_merge disk.dev.blkread disk.dev.blkwrite disk.dev.read_rawactive disk.dev.write_rawactive disk.dev.avg_qlen disk.dev.avactive`
 
 ---
 

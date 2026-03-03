@@ -92,6 +92,39 @@ pmlogsynth --list-metrics
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery
 
 <!-- MANUAL ADDITIONS START -->
+## PCP Metric PMIDs — macOS vs Linux
+
+**macOS `pminfo` is useless for verifying Linux PMIDs.** macOS PCP uses domain 78 for
+nearly everything; Linux uses domain 60 (linux PMDA) and domain 58 (existing pmlogsynth
+convention for mem.util.*). Running `pminfo -d <metric>` on macOS either returns wrong
+domain numbers or "Unknown metric name" for Linux-only metrics.
+
+**Authoritative source for Linux PMIDs:**
+`https://github.com/performancecopilot/pcp` → `src/pmdas/linux/pmda.c`
+
+Key cluster definitions (from `src/pmdas/linux/linux.h`):
+- `CLUSTER_STAT = 0` — `/proc/stat` (cpu, disk, scheduler, swap page counters)
+- `CLUSTER_MEMINFO = 1` — `/proc/meminfo` (mem.util.*, swap.used, mem.physmem)
+- `CLUSTER_LOADAVG = 2` — `/proc/loadavg`
+- `CLUSTER_VMSTAT = 28` — `/proc/vmstat` (mem.vmstat.pgpgin etc.)
+- `CLUSTER_FILESYS = 5` — mounted filesystems (NOT disk.dev.* — common mistake)
+
+**Existing code deviates from real PMIDs — intentionally and safely.** pmlogsynth archives
+are self-contained: pmrep reads metrics by name via the archive's own PMNS. The PMID just
+needs to be unique within the archive, not match the live PMDA. Existing code uses:
+- Domain 58 cluster 0 for `mem.util.*` (real PMDA: domain 60 cluster 1) — works fine
+- Cluster 5 for `disk.dev.*` (real PMDA: cluster 0 = CLUSTER_STAT) — works fine
+
+**Convention for new metrics:** follow the existing code's cluster/domain conventions to
+maintain internal consistency. Pick item numbers that don't conflict with existing
+descriptors in the same (domain, cluster) pair.
+
+**Linux verification command** (run on CI or a Linux box with PCP installed):
+```bash
+pminfo -md kernel.all.cpu.vuser kernel.all.intr hinv.ncpu swap.used disk.dev.read
+```
+
+
 ## Workflow — MANDATORY
 
 **Run `./pre-commit.sh` before every commit and push.** It is the single gate

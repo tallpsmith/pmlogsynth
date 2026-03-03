@@ -19,8 +19,8 @@ def test_list_metrics_output_is_sorted() -> None:
 
 
 def test_list_metrics_count() -> None:
-    """--list-metrics has exactly 24 metric names."""
-    assert len(_ALL_METRIC_NAMES) == 24
+    """--list-metrics has exactly 53 metric names (24 original + 29 new from 004)."""
+    assert len(_ALL_METRIC_NAMES) == 53
 
 
 def test_list_metrics_contains_all_domains() -> None:
@@ -36,7 +36,7 @@ def test_list_metrics_cmd_exits_zero(capsys: pytest.CaptureFixture) -> None:
     assert rc == 0
     captured = capsys.readouterr()
     lines = [line for line in captured.out.splitlines() if line.strip()]
-    assert len(lines) == 24
+    assert len(lines) == 53
     assert lines == sorted(lines)
 
 

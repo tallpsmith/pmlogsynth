@@ -1,9 +1,9 @@
-"""Tier 1 unit tests for MemoryMetricModel (T019)."""
+"""Tier 1 unit tests for MemoryMetricModel (T019 / T009)."""
 
 import pytest
 
 from pmlogsynth.domains.memory import MemoryMetricModel
-from pmlogsynth.pcp_constants import PM_SEM_DISCRETE, PM_SEM_INSTANT
+from pmlogsynth.pcp_constants import PM_SEM_COUNTER, PM_SEM_DISCRETE, PM_SEM_INSTANT
 from pmlogsynth.profile import HardwareProfile, MemoryStressor
 from pmlogsynth.sampler import ValueSampler
 
@@ -177,11 +177,11 @@ def test_none_stressor_uses_all_defaults():
 
 
 def test_metric_descriptors_count():
-    """metric_descriptors() must return exactly 5 MetricDescriptor objects."""
+    """metric_descriptors() must return exactly 13 MetricDescriptor objects."""
     hw = make_hw()
     model = make_model()
     descriptors = model.metric_descriptors(hw)
-    assert len(descriptors) == 5
+    assert len(descriptors) == 13
 
 
 def test_metric_descriptors_names():
@@ -196,6 +196,14 @@ def test_metric_descriptors_names():
         "mem.util.cached",
         "mem.util.bufmem",
         "mem.physmem",
+        "mem.util.active",
+        "mem.util.inactive",
+        "mem.util.slab",
+        "swap.used",
+        "swap.pagesin",
+        "swap.pagesout",
+        "mem.vmstat.pgpgin",
+        "mem.vmstat.pgpgout",
     }
     assert names == expected
 
@@ -230,3 +238,138 @@ def test_metric_descriptors_indom_null():
     model = make_model()
     for d in model.metric_descriptors(hw):
         assert d.indom is None, f"{d.name} has non-null indom: {d.indom}"
+
+
+# ---------------------------------------------------------------------------
+# T009: new memory metrics (written before implementation — must fail initially)
+# ---------------------------------------------------------------------------
+
+
+def test_new_memory_metric_pmids():
+    """Verify PMIDs for all 8 new memory metrics match research.md."""
+    hw = make_hw()
+    model = make_model()
+    desc = {d.name: d for d in model.metric_descriptors(hw)}
+    assert desc["mem.util.active"].pmid == (58, 0, 15)
+    assert desc["mem.util.inactive"].pmid == (58, 0, 16)
+    assert desc["mem.util.slab"].pmid == (58, 0, 12)
+    assert desc["swap.used"].pmid == (58, 1, 0)
+    assert desc["swap.pagesin"].pmid == (58, 1, 1)
+    assert desc["swap.pagesout"].pmid == (58, 1, 2)
+    assert desc["mem.vmstat.pgpgin"].pmid == (58, 2, 0)
+    assert desc["mem.vmstat.pgpgout"].pmid == (58, 2, 1)
+
+
+def test_instant_new_metrics_semantics():
+    """mem.util.active/inactive/slab and swap.used must be PM_SEM_INSTANT."""
+    hw = make_hw()
+    model = make_model()
+    desc = {d.name: d for d in model.metric_descriptors(hw)}
+    for name in ("mem.util.active", "mem.util.inactive", "mem.util.slab", "swap.used"):
+        assert desc[name].sem == PM_SEM_INSTANT, f"{name}: expected PM_SEM_INSTANT"
+
+
+def test_counter_new_metrics_semantics():
+    """swap.pagesin/out and pgpg* must be PM_SEM_COUNTER."""
+    hw = make_hw()
+    model = make_model()
+    desc = {d.name: d for d in model.metric_descriptors(hw)}
+    for name in ("swap.pagesin", "swap.pagesout", "mem.vmstat.pgpgin", "mem.vmstat.pgpgout"):
+        assert desc[name].sem == PM_SEM_COUNTER, f"{name}: expected PM_SEM_COUNTER"
+
+
+@pytest.mark.parametrize("used_ratio", [0.0, 0.40, 0.70])
+def test_swap_is_zero_at_or_below_70pct(used_ratio):
+    """swap.used, swap.pagesin, swap.pagesout must be 0 when used_ratio <= 0.70."""
+    stressor = MemoryStressor(used_ratio=used_ratio, noise=0.0)
+    result = compute(stressor)
+    assert result["swap.used"][None] == 0, f"swap.used nonzero at used_ratio={used_ratio}"
+    assert result["swap.pagesin"][None] == 0
+    assert result["swap.pagesout"][None] == 0
+
+
+@pytest.mark.parametrize("used_ratio", [0.75, 0.85, 1.0])
+def test_swap_is_nonzero_above_70pct(used_ratio):
+    """swap.used, swap.pagesin, swap.pagesout must be >0 when used_ratio > 0.70."""
+    stressor = MemoryStressor(used_ratio=used_ratio, noise=0.0)
+    result = compute(stressor)
+    assert result["swap.used"][None] > 0, f"swap.used zero at used_ratio={used_ratio}"
+    assert result["swap.pagesin"][None] > 0
+    assert result["swap.pagesout"][None] > 0
+
+
+def test_active_is_60pct_of_used():
+    """mem.util.active = int(used_kb * 0.60)."""
+    stressor = MemoryStressor(used_ratio=0.50, noise=0.0)
+    result = compute(stressor)
+    used = result["mem.util.used"][None]
+    active = result["mem.util.active"][None]
+    assert active == int(used * 0.60), f"active={active} expected {int(used * 0.60)}"
+
+
+def test_inactive_is_25pct_of_used():
+    """mem.util.inactive = int(used_kb * 0.25)."""
+    stressor = MemoryStressor(used_ratio=0.50, noise=0.0)
+    result = compute(stressor)
+    used = result["mem.util.used"][None]
+    inactive = result["mem.util.inactive"][None]
+    assert inactive == int(used * 0.25), f"inactive={inactive} expected {int(used * 0.25)}"
+
+
+def test_slab_is_4pct_of_physmem():
+    """mem.util.slab = int(physmem_kb * 0.04)."""
+    hw = make_hw()
+    stressor = MemoryStressor(used_ratio=0.50, noise=0.0)
+    result = compute(stressor, hw=hw)
+    slab = result["mem.util.slab"][None]
+    expected = int(hw.memory_kb * 0.04)
+    assert slab == expected, f"slab={slab} expected {expected}"
+
+
+def test_pgpgin_nonzero_with_memory_usage():
+    """mem.vmstat.pgpgin must be nonzero when used_ratio > 0."""
+    stressor = MemoryStressor(used_ratio=0.50, noise=0.0)
+    result = compute(stressor)
+    assert result["mem.vmstat.pgpgin"][None] > 0
+    assert result["mem.vmstat.pgpgout"][None] > 0
+
+
+def test_pgpgin_counter_accumulates():
+    """mem.vmstat.pgpgin must accumulate monotonically across ticks."""
+    hw = make_hw()
+    sampler = make_sampler()
+    model = make_model()
+    stressor = MemoryStressor(used_ratio=0.60, noise=0.0)
+    r1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    r2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    assert r2["mem.vmstat.pgpgin"][None] > r1["mem.vmstat.pgpgin"][None]
+    assert r2["mem.vmstat.pgpgout"][None] > r1["mem.vmstat.pgpgout"][None]
+
+
+def test_swap_counter_accumulates_above_threshold():
+    """swap.pagesin counter must increase monotonically above the 70% threshold."""
+    hw = make_hw()
+    sampler = make_sampler()
+    model = make_model()
+    stressor = MemoryStressor(used_ratio=0.80, noise=0.0)
+    r1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    r2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    assert r2["swap.pagesin"][None] > r1["swap.pagesin"][None]
+    assert r2["swap.pagesout"][None] > r1["swap.pagesout"][None]
+
+
+def test_new_metrics_present_in_compute_result():
+    """compute() must include all 8 new metric names in result dict."""
+    stressor = MemoryStressor(used_ratio=0.50, noise=0.0)
+    result = compute(stressor)
+    for name in (
+        "mem.util.active",
+        "mem.util.inactive",
+        "mem.util.slab",
+        "swap.used",
+        "swap.pagesin",
+        "swap.pagesout",
+        "mem.vmstat.pgpgin",
+        "mem.vmstat.pgpgout",
+    ):
+        assert name in result, f"Missing metric: {name}"

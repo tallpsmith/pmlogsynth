@@ -72,18 +72,20 @@ class ArchiveWriter:
 
         output = Path(self._output_path)
 
-        # FR-053: pre-existence check
-        if not self._force:
-            conflicts = [
-                str(output.parent / (output.name + suf))
-                for suf in self._SUFFIXES
-                if (output.parent / (output.name + suf)).exists()
-            ]
-            if conflicts:
+        # FR-053: pre-existence check; FR-054: force-delete before writing
+        existing = [
+            output.parent / (output.name + suf)
+            for suf in self._SUFFIXES
+            if (output.parent / (output.name + suf)).exists()
+        ]
+        if existing:
+            if not self._force:
                 raise ArchiveConflictError(
-                    f"Output archive files already exist: {conflicts}. "
+                    f"Output archive files already exist: {[str(p) for p in existing]}. "
                     f"Use --force to overwrite."
                 )
+            for p in existing:
+                p.unlink()
 
         log: Any = pmi.pmiLogImport(self._output_path)
 

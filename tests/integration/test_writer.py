@@ -255,3 +255,44 @@ def test_writer_force_overwrites(tmp_path: Path) -> None:
             output_path=output, profile=profile, hardware=hardware, force=True
         )
         writer.write(timeline=timeline, sampler=sampler)  # should not raise
+
+
+@pytest.mark.integration
+def test_writer_force_deletes_existing_files_before_writing(tmp_path: Path) -> None:
+    """--force must unlink all existing archive files before calling pmiLogImport (FR-054)."""
+    hardware = _make_hardware()
+    profile = _make_profile(hardware, tmp_path)
+    sampler = ValueSampler(noise=0.0, seed=42)
+    timeline = TimelineSequencer(profile).expand()
+    output = str(tmp_path / "out")
+
+    existing = [tmp_path / "out.0", tmp_path / "out.index", tmp_path / "out.meta"]
+    for f in existing:
+        f.write_text("stale")
+
+    files_at_import_time: list = []
+
+    mock_log = MagicMock()
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
+
+        def capture_files_then_return(path: str) -> MagicMock:
+            files_at_import_time.extend(f for f in existing if f.exists())
+            return mock_log
+
+        mock_pmi.pmiLogImport.side_effect = capture_files_then_return
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
+
+        from pmlogsynth.writer import ArchiveWriter
+
+        writer = ArchiveWriter(
+            output_path=output, profile=profile, hardware=hardware, force=True
+        )
+        writer.write(timeline=timeline, sampler=sampler)
+
+    assert files_at_import_time == [], (
+        f"Stale archive files still existed when pmiLogImport was called: "
+        f"{[f.name for f in files_at_import_time]}"
+    )

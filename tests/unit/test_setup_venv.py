@@ -23,6 +23,7 @@ def make_uname_stub(directory: Path, platform: str) -> None:
 def make_python3_stub(directory: Path, exit_code: int = 0) -> Path:
     """
     Handles -m venv by creating <venv>/bin/pip; all other invocations exit cleanly.
+    Uses absolute paths for mkdir/chmod so the stub works with a minimal PATH.
     Returns the stub path so pmpython stubs can point at it.
     """
     stub = directory / "python3"
@@ -31,9 +32,9 @@ def make_python3_stub(directory: Path, exit_code: int = 0) -> Path:
         "if [[ \"$*\" == *\"-m venv\"* ]]; then\n"
         f"  if [ {exit_code} -ne 0 ]; then exit {exit_code}; fi\n"
         "  VENV=\"${!#}\"\n"
-        "  mkdir -p \"$VENV/bin\"\n"
+        "  /bin/mkdir -p \"$VENV/bin\"\n"
         "  printf '#!/bin/bash\\nexit 0\\n' > \"$VENV/bin/pip\"\n"
-        "  chmod +x \"$VENV/bin/pip\"\n"
+        "  /bin/chmod +x \"$VENV/bin/pip\"\n"
         "fi\n"
         f"exit {exit_code}\n"
     )
@@ -62,9 +63,10 @@ def base_env(tmp_path: Path, platform: str) -> tuple:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     make_uname_stub(bin_dir, platform)
-    # /bin only (not /usr/bin) so system tools like pmpython don't leak in.
-    # /bin provides mkdir and chmod needed by the python3 stub.
-    env = {"PATH": f"{bin_dir}:/bin", "HOME": str(tmp_path)}
+    # bin_dir only — mirrors the pre-commit test strategy.
+    # System tools (including pmpython at /usr/bin on Ubuntu) cannot leak in.
+    # The python3 stub uses absolute /bin/mkdir and /bin/chmod to avoid needing PATH.
+    env = {"PATH": str(bin_dir), "HOME": str(tmp_path)}
     return env, bin_dir
 
 

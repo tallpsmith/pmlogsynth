@@ -508,3 +508,64 @@ class TestProfileResolver:
         resolver = ProfileResolver()
         with pytest.raises(ValidationError, match="cpus"):
             resolver.resolve_host(host)
+
+
+# ---------------------------------------------------------------------------
+# meta.start parsing tests
+# ---------------------------------------------------------------------------
+
+
+class TestMetaStart:
+    def test_meta_start_omitted_is_none(self) -> None:
+        profile = WorkloadProfile.from_string(MINIMAL_INLINE_HOST)
+        assert profile.meta.start is None
+
+    def test_meta_start_parses_iso8601_utc_z(self) -> None:
+        yaml_text = textwrap.dedent("""\
+            meta:
+              duration: 120
+              interval: 60
+              start: "2026-03-02T00:00:00Z"
+            host:
+              cpus: 2
+              memory_kb: 8388608
+            phases:
+              - name: baseline
+                duration: 120
+        """)
+        from datetime import datetime, timezone
+        profile = WorkloadProfile.from_string(yaml_text)
+        assert profile.meta.start == datetime(2026, 3, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+    def test_meta_start_parses_iso8601_space_utc(self) -> None:
+        yaml_text = textwrap.dedent("""\
+            meta:
+              duration: 120
+              interval: 60
+              start: "2026-03-02 00:00:00 UTC"
+            host:
+              cpus: 2
+              memory_kb: 8388608
+            phases:
+              - name: baseline
+                duration: 120
+        """)
+        from datetime import datetime, timezone
+        profile = WorkloadProfile.from_string(yaml_text)
+        assert profile.meta.start == datetime(2026, 3, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+    def test_meta_start_invalid_raises_validation_error(self) -> None:
+        yaml_text = textwrap.dedent("""\
+            meta:
+              duration: 120
+              interval: 60
+              start: "not-a-date"
+            host:
+              cpus: 2
+              memory_kb: 8388608
+            phases:
+              - name: baseline
+                duration: 120
+        """)
+        with pytest.raises(ValidationError, match="meta.start"):
+            WorkloadProfile.from_string(yaml_text)

@@ -69,7 +69,8 @@ Default:
 Archive start time.
 Accepts ISO\ 8601 (\fI2024-01-15T09:00:00Z\fR) or human-readable
 (\fI"2024-01-15 09:00:00 UTC"\fR) format.
-Default: now \- \fImeta.duration\fR (archive ends approximately now).
+Overrides \fBmeta.start\fR in the profile.
+Default: today at 00:00:00 UTC (overridden by \fBmeta.start\fR in the profile).
 .TP
 .BR \-v ", " \-\-verbose
 Print per-sample metric values to stderr as the archive is written.
@@ -133,6 +134,12 @@ Global multiplicative Gaussian noise level, range [0.0, 1.0] (default: 0.0).
 .TP
 .B mean_packet_bytes
 Average packet size used for packet-count estimation (default: 1400).
+.TP
+.B start
+ISO\ 8601 timestamp (e.g.\& \fI2026-03-02T00:00:00Z\fR).
+Sets the archive start time.
+Default: today at 00:00:00\ UTC.
+Overridden by \fB\-\-start\fR on the command line.
 .SS host
 Three mutually exclusive forms:
 .PP

@@ -138,7 +138,10 @@ def _add_generate_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--start",
         metavar="TIMESTAMP",
-        help="Archive start time (ISO 8601 or 'YYYY-MM-DD HH:MM:SS TZ').",
+        help=(
+            "Archive start time (ISO 8601 or 'YYYY-MM-DD HH:MM:SS TZ'). "
+            "Overrides meta.start. Default: today at 00:00:00 UTC."
+        ),
     )
     p.add_argument(
         "-v", "--verbose",

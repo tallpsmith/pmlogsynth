@@ -17,6 +17,14 @@ Global archive metadata.
 | `interval` | integer | `60` | Positive integer (seconds) |
 | `noise` | float | `0.0` | Range [0.0, 1.0] |
 | `mean_packet_bytes` | integer | `1400` | Positive |
+| `start` | string | today 00:00:00 UTC | ISO 8601 timestamp (e.g. `2026-03-02T00:00:00Z`). Sets archive start time. Overridden by CLI `--start`. |
+
+**Archive start time priority** (highest wins):
+`CLI --start` > `meta.start` (YAML) > today midnight UTC (default)
+
+Omitting `meta.start` anchors every run to today's midnight UTC, so phase labels
+(overnight, peak, etc.) land at their intended clock positions regardless of when
+the tool is invoked.
 
 ---
 

@@ -1,7 +1,7 @@
 """Timeline sequencer: expand phases into a flat list of SamplePoints."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from pmlogsynth.profile import (
@@ -48,7 +48,8 @@ class TimelineSequencer:
         """Expand phases into SamplePoints.
 
         Args:
-            start_time: Override start time. Defaults to now - meta.duration.
+            start_time: Override start time.
+                Priority: explicit arg > meta.start > today midnight UTC.
 
         Returns:
             ExpandedTimeline with one SamplePoint per interval tick.
@@ -70,7 +71,7 @@ class TimelineSequencer:
             )
 
         if start_time is None:
-            start_time = datetime.now(tz=timezone.utc) - timedelta(seconds=meta.duration)
+            start_time = self._profile.meta.start or _today_midnight_utc()
 
         samples = self._generate_samples(phases, meta, start_time)
         return ExpandedTimeline(samples=samples, start_time=start_time)
@@ -199,6 +200,17 @@ class TimelineSequencer:
             prev_network = target_network
 
         return samples
+
+
+# ---------------------------------------------------------------------------
+# Default start time
+# ---------------------------------------------------------------------------
+
+
+def _today_midnight_utc() -> datetime:
+    """Return today's date at 00:00:00 UTC."""
+    now = datetime.now(tz=timezone.utc)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 # ---------------------------------------------------------------------------

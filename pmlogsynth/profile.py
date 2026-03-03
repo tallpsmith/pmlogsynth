@@ -1,6 +1,7 @@
 """Profile loading, validation, and hardware profile resolution."""
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -115,6 +116,7 @@ class ProfileMeta:
     interval: int = 60
     noise: float = 0.0
     mean_packet_bytes: int = 1400
+    start: Optional[datetime] = None
 
 
 @dataclass
@@ -186,6 +188,30 @@ class WorkloadProfile:
 # ---------------------------------------------------------------------------
 
 
+def _parse_start_for_meta(raw: str) -> datetime:
+    """Parse meta.start ISO 8601 string to a UTC-aware datetime."""
+    formats = [
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S+00:00",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S UTC",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%z",
+    ]
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(raw, fmt)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except ValueError:
+            continue
+    raise ValidationError(
+        f"meta.start: cannot parse {raw!r}. "
+        f"Use ISO 8601 (e.g. 2026-03-02T00:00:00Z) or 'YYYY-MM-DD HH:MM:SS UTC'."
+    )
+
+
 def _parse_meta(raw: Any) -> ProfileMeta:
     if not isinstance(raw, dict):
         raise ValidationError("meta must be a mapping")
@@ -201,6 +227,9 @@ def _parse_meta(raw: Any) -> ProfileMeta:
     noise = float(raw.get("noise", 0.0))
     if not (0.0 <= noise <= 1.0):
         raise ValidationError(f"meta.noise must be in [0.0, 1.0], got {noise} (FR-029)")
+    start: Optional[datetime] = None
+    if "start" in raw:
+        start = _parse_start_for_meta(str(raw["start"]))
     return ProfileMeta(
         duration=duration,
         hostname=str(raw.get("hostname", "synthetic-host")),
@@ -208,6 +237,7 @@ def _parse_meta(raw: Any) -> ProfileMeta:
         interval=interval,
         noise=noise,
         mean_packet_bytes=int(raw.get("mean_packet_bytes", 1400)),
+        start=start,
     )
 
 

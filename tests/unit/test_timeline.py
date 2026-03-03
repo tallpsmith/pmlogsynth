@@ -1,7 +1,6 @@
 """Unit tests for timeline.py — TimelineSequencer."""
 
-import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -219,15 +218,36 @@ class TestSamplePointTimestamps:
         assert tl.start_time == custom_start
         assert tl.samples[0].timestamp_sec == int(custom_start.timestamp())
 
-    def test_default_start_time_is_now_minus_duration(self) -> None:
+    def test_default_start_time_is_today_midnight_utc(self) -> None:
         phases = [Phase(name="baseline", duration=60)]
         profile = make_profile_obj(phases, duration=60)
-        before = int(time.time())
         seq = TimelineSequencer(profile)
         tl = seq.expand()
-        after = int(time.time())
-        start_ts = int(tl.start_time.timestamp())
-        assert before - 60 <= start_ts <= after
+        today_midnight = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+        assert tl.start_time == today_midnight
+
+    def test_meta_start_used_when_no_explicit_arg(self) -> None:
+        meta_start = datetime(2026, 3, 2, 0, 0, 0, tzinfo=timezone.utc)
+        meta = ProfileMeta(duration=60, start=meta_start)
+        hw = make_hw()
+        host = HostConfig(cpus=2, memory_kb=8388608)
+        phases = [Phase(name="baseline", duration=60)]
+        profile = WorkloadProfile(meta=meta, host=host, phases=phases, hardware=hw)
+        seq = TimelineSequencer(profile)
+        tl = seq.expand()
+        assert tl.start_time == meta_start
+
+    def test_explicit_start_time_overrides_meta_start(self) -> None:
+        meta_start = datetime(2026, 3, 2, 0, 0, 0, tzinfo=timezone.utc)
+        explicit_start = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+        meta = ProfileMeta(duration=60, start=meta_start)
+        hw = make_hw()
+        host = HostConfig(cpus=2, memory_kb=8388608)
+        phases = [Phase(name="baseline", duration=60)]
+        profile = WorkloadProfile(meta=meta, host=host, phases=phases, hardware=hw)
+        seq = TimelineSequencer(profile)
+        tl = seq.expand(start_time=explicit_start)
+        assert tl.start_time == explicit_start
 
 
 # ---------------------------------------------------------------------------

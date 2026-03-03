@@ -176,42 +176,9 @@ network:
 
 ## Complete example
 
-```yaml
-meta:
-  hostname: prod-sim
-  timezone: UTC
-  duration: 1200
-  interval: 60
-  noise: 0.03
+See [`docs/complete-example.yml`](complete-example.yml) — a ready-to-run profile
+covering all four stressor domains across three phases (baseline → ramp → peak).
 
-host:
-  profile: generic-large
-
-phases:
-  - name: baseline
-    duration: 300
-    cpu:
-      utilization: 0.15
-      user_ratio: 0.70
-      sys_ratio: 0.20
-      iowait_ratio: 0.10
-    memory:
-      used_ratio: 0.40
-
-  - name: ramp
-    duration: 300
-    transition: linear
-    cpu:
-      utilization: 0.80
-
-  - name: peak
-    duration: 600
-    cpu:
-      utilization: 0.90
-    disk:
-      read_mbps: 500.0
-      write_mbps: 200.0
-    network:
-      rx_mbps: 800.0
-      tx_mbps: 200.0
+```bash
+pmlogsynth -o ./generated-archives/complete-example docs/complete-example.yml
 ```

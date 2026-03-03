@@ -52,8 +52,10 @@ source .venv/bin/activate
 
 ### 1. Create a profile
 
+[`docs/spike.yml`](docs/spike.yml) is ready to use — or write your own:
+
 ```yaml
-# spike.yaml
+# docs/spike.yml
 meta:
   hostname: demo-host
   timezone: UTC
@@ -78,7 +80,7 @@ phases:
 ### 2. Validate your profile
 
 ```bash
-pmlogsynth --validate spike.yaml
+pmlogsynth --validate docs/spike.yml
 # Exit 0 = valid, Exit 1 = error (stderr shows what's wrong)
 ```
 
@@ -87,16 +89,19 @@ pmlogsynth --validate spike.yaml
 ### 3. Generate the archive
 
 ```bash
-pmlogsynth -o ./out spike.yaml
-# Creates: out.0  out.index  out.meta
+pmlogsynth -o ./generated-archives/spike docs/spike.yml
+# Creates: generated-archives/spike.0  spike.index  spike.meta
 ```
+
+> **Note**: `generated-archives/` is gitignored — a safe scratch space for locally
+> generated archives.
 
 ### 4. Verify with PCP tools
 
 ```bash
-pmlogcheck ./out
-pmval -a ./out kernel.all.cpu.user
-pmrep -a ./out -o csv kernel.all.cpu.user mem.util.used
+pmlogcheck ./generated-archives/spike
+pmval -a ./generated-archives/spike kernel.all.cpu.user
+pmrep -a ./generated-archives/spike -o csv kernel.all.cpu.user mem.util.used
 ```
 
 ### 5. Explore available options
@@ -129,6 +134,9 @@ Use `host.profile: <name>` in your profile, or add your own profiles to
 
 Full YAML schema documentation — all fields, types, defaults, valid ranges,
 and constraints — is in [`docs/profile-format.md`](docs/profile-format.md).
+
+A complete, ready-to-run example covering all four stressor domains is in
+[`docs/complete-example.yml`](docs/complete-example.yml).
 
 ---
 

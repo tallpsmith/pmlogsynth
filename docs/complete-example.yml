@@ -1,0 +1,37 @@
+meta:
+  hostname: prod-sim
+  timezone: UTC
+  duration: 1200
+  interval: 60
+  noise: 0.03
+
+host:
+  profile: generic-large
+
+phases:
+  - name: baseline
+    duration: 300
+    cpu:
+      utilization: 0.15
+      user_ratio: 0.70
+      sys_ratio: 0.20
+      iowait_ratio: 0.10
+    memory:
+      used_ratio: 0.40
+
+  - name: ramp
+    duration: 300
+    transition: linear
+    cpu:
+      utilization: 0.80
+
+  - name: peak
+    duration: 600
+    cpu:
+      utilization: 0.90
+    disk:
+      read_mbps: 500.0
+      write_mbps: 200.0
+    network:
+      rx_mbps: 800.0
+      tx_mbps: 200.0

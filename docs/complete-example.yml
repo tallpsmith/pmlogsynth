@@ -9,43 +9,76 @@ host:
   profile: generic-large
 
 phases:
-  # 6 hours of quiet overnight baseline
-  - name: baseline
+  # Midnight–6am: dead quiet overnight baseline
+  - name: overnight
     duration: 6h
     cpu:
-      utilization: 0.15
-      user_ratio: 0.70
-      sys_ratio: 0.20
+      utilization: 0.12
+      user_ratio: 0.65
+      sys_ratio: 0.25
       iowait_ratio: 0.10
     memory:
-      used_ratio: 0.40
-      cache_ratio: 0.30
+      used_ratio: 0.35
+      cache_ratio: 0.40
     disk:
-      read_mbps: 20.0
-      write_mbps: 10.0
+      read_mbps: 15.0
+      write_mbps: 8.0
+    network:
+      rx_mbps: 20.0
+      tx_mbps: 5.0
 
-  # 6-hour linear ramp into business hours
-  - name: ramp
-    duration: 6h
+  # 6am–10am: morning ramp as users and jobs arrive
+  - name: morning-ramp
+    duration: 4h
     transition: linear
     cpu:
-      utilization: 0.80
+      utilization: 0.88
+      user_ratio: 0.72
+      sys_ratio: 0.18
+      iowait_ratio: 0.10
     memory:
-      used_ratio: 0.65
+      used_ratio: 0.78
+      cache_ratio: 0.15
     disk:
-      read_mbps: 200.0
-      write_mbps: 80.0
+      read_mbps: 480.0
+      write_mbps: 190.0
+    network:
+      rx_mbps: 750.0
+      tx_mbps: 190.0
 
-  # 12-hour sustained peak load
-  - name: peak
-    duration: 12h
+  # 10am–4pm: sustained business-hours peak
+  - name: business-peak
+    duration: 6h
     cpu:
       utilization: 0.90
+      user_ratio: 0.72
+      sys_ratio: 0.18
+      iowait_ratio: 0.10
     memory:
       used_ratio: 0.80
+      cache_ratio: 0.14
     disk:
       read_mbps: 500.0
       write_mbps: 200.0
     network:
       rx_mbps: 800.0
       tx_mbps: 200.0
+
+  # 4pm–midnight: gradual evening roll-off (linear down to overnight levels)
+  - name: evening-rolloff
+    duration: 8h
+    transition: linear
+    cpu:
+      utilization: 0.12
+      user_ratio: 0.65
+      sys_ratio: 0.25
+      iowait_ratio: 0.10
+    memory:
+      used_ratio: 0.35
+      cache_ratio: 0.40
+    disk:
+      read_mbps: 15.0
+      write_mbps: 8.0
+    network:
+      rx_mbps: 20.0
+      tx_mbps: 5.0

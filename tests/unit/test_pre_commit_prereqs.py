@@ -304,6 +304,12 @@ class TestSummaryOutput:
         assert "→ ruff" in result.stdout
         assert "→ mypy" in result.stdout
 
+    def test_progress_precedes_result(self, tmp_path):
+        result = run_script(self._build_env(tmp_path))
+        pos_arrow = result.stdout.index("→ ruff")
+        pos_check = result.stdout.index("✓ ruff")
+        assert pos_arrow < pos_check
+
     def test_no_tool_banner_noise(self, tmp_path):
         result = run_script(self._build_env(tmp_path))
         assert "=== ruff check ===" not in result.stdout

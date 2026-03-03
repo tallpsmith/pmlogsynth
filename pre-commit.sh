@@ -14,18 +14,25 @@ QUIET=false
 [[ "${1:-}" == "-q" ]] && QUIET=true
 
 # Prints a progress line before running, then ✓ on success so the user sees
-# live activity instead of silence during long-running checks.  On failure:
-# dumps captured output (unless -q) and exits.
+# live activity instead of silence during long-running checks.
+#
+# In non-quiet mode: run the command with direct stdout/stderr so writes go
+# straight to the TTY — no pipe buffering, no batched terminal rendering.
+# In quiet mode: capture output and suppress it on success; dump on failure.
 run_check() {
     local label="$1"; shift
     $QUIET || printf '  → %s...\n' "$label"
-    local out rc
-    out=$("$@" 2>&1)
-    rc=$?
-    if [ $rc -ne 0 ]; then
-        $QUIET || printf '%s\n' "$out"
-        exit $rc
+    local rc
+    if $QUIET; then
+        local out
+        out=$("$@" 2>&1)
+        rc=$?
+        [ $rc -ne 0 ] && printf '%s\n' "$out"
+    else
+        "$@" 2>&1
+        rc=$?
     fi
+    [ $rc -ne 0 ] && exit $rc
     $QUIET || printf '  ✓ %s\n' "$label"
 }
 

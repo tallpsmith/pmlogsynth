@@ -28,27 +28,23 @@ sudo dnf install pcp python3-pcp
 pip install pmlogsynth
 ```
 
-**macOS** (Homebrew): PCP compiles its Python bindings against Homebrew's Python
-(currently `python@3.14`).  The bindings are **only** available to that specific
-Python — if you run pmlogsynth or its tests from a different Python (system, pyenv,
-conda), `import cpmapi` will fail.
+**macOS** (Homebrew): PCP compiles its Python bindings against Homebrew's Python.
+The bindings are **only** available to that specific Python — if you run pmlogsynth
+or its tests from a different Python (system, pyenv, conda), `import cpmapi` will fail.
 
-Create a virtualenv from Homebrew's Python so the PCP bindings are on `sys.path`:
+Use the provided setup script, which handles venv creation correctly on all platforms:
 ```bash
-$(readlink -f $(which pmpython)) -m venv .venv
+./setup-venv.sh
 source .venv/bin/activate
-pip install pmlogsynth
 ```
 
 **From source**:
 ```bash
 git clone https://github.com/tallpsmith/pmlogsynth
 cd pmlogsynth
-pip install -e ".[dev]"
+./setup-venv.sh
+source .venv/bin/activate
 ```
-
-> **macOS note**: make sure your venv is created from Homebrew's Python (see above)
-> before running `pip install`, otherwise `import cpmapi` will fail at runtime.
 
 ---
 

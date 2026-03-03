@@ -10,12 +10,10 @@ check_prerequisites() {
     if [ -z "$VIRTUAL_ENV" ]; then
         if [ "$platform" = "Darwin" ]; then
             MISSING+=("MISSING: no virtualenv active
-  pre-commit.sh requires a Python virtualenv created from pmpython.
-  Fix (macOS):  \$(readlink -f \$(which pmpython)) -m venv .venv && source .venv/bin/activate")
+  Fix:  ./setup-venv.sh && source .venv/bin/activate")
         else
             MISSING+=("MISSING: no virtualenv active
-  pre-commit.sh requires a Python virtualenv created from pmpython.
-  Fix (Linux):  python3 -m venv .venv && source .venv/bin/activate")
+  Fix:  ./setup-venv.sh && source .venv/bin/activate")
         fi
     fi
 
@@ -41,12 +39,12 @@ check_prerequisites() {
 
     if ! python3 -c "import cpmapi" > /dev/null 2>&1; then
         MISSING+=("MISSING: cpmapi not importable
-  Create venv from pmpython:  \$(readlink -f \$(which pmpython)) -m venv .venv")
+  Fix:  deactivate && ./setup-venv.sh && source .venv/bin/activate")
     fi
 
     if ! python3 -c "import pcp.pmi" > /dev/null 2>&1; then
         MISSING+=("MISSING: pcp.pmi not importable
-  Create venv from pmpython:  \$(readlink -f \$(which pmpython)) -m venv .venv")
+  Fix:  deactivate && ./setup-venv.sh && source .venv/bin/activate")
     fi
 
     if [ ${#MISSING[@]} -gt 0 ]; then

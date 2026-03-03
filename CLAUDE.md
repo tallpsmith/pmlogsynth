@@ -4,6 +4,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-01
 
 ## Active Technologies
 - Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as (003-dx-improvements)
+- Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML (004-pmrep-view-support)
+- PCP v3 binary archive files (004-pmrep-view-support)
 
 - **Language**: Python 3.8+ (minimum); system Python tested in CI with PCP installed
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
@@ -83,10 +85,10 @@ pmlogsynth --list-metrics
 - No NumPy — use `random.gauss` from stdlib
 
 ## Recent Changes
+- 004-pmrep-view-support: Added Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML
 - 003-dx-improvements: Added Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as
 - 002-phase2-e2e-docs: Added Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML
 
-- 001-pmlogsynth-phase1: Initial project setup — Python 3.8+ CLI tool with
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery
 
 <!-- MANUAL ADDITIONS START -->
@@ -110,9 +112,16 @@ All locally generated PCP archives go in `generated-archives/` (gitignored).
 Never generate archives to the project root or ad-hoc paths.
 
 ```bash
-pmlogsynth -o ./generated-archives/spike spike.yml
+pmlogsynth -o ./generated-archives/spike docs/spike.yml
 pmstat -a ./generated-archives/spike
 ```
 
 See `docs/pcp-tools.md` for the full PCP toolkit reference and validation workflow.
+
+## Example Profile Files
+
+`docs/spike.yml` and `docs/complete-example.yml` are the canonical example profiles.
+
+**Invariant**: the inline YAML block in `README.md` Quick Start (step 1) must always
+match `docs/spike.yml` exactly. If one changes, update the other.
 <!-- MANUAL ADDITIONS END -->

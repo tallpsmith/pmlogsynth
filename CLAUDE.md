@@ -90,4 +90,17 @@ pmlogsynth --list-metrics
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery
 
 <!-- MANUAL ADDITIONS START -->
+## Workflow — MANDATORY
+
+**Run `./pre-commit.sh` before every commit and push.** It is the single gate
+that mirrors CI exactly: mandoc lint, ruff, mypy, unit + integration tests,
+and E2E tests when PCP is available.
+
+First-time setup (macOS):
+```bash
+./setup-venv.sh        # creates .venv with the correct PCP-linked Python
+./pre-commit.sh        # auto-activates the venv; run quality gate
+```
+
+Never commit without a green `./pre-commit.sh`.
 <!-- MANUAL ADDITIONS END -->

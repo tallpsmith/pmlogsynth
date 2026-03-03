@@ -11,6 +11,7 @@ from pmlogsynth.profile import (
     ProfileResolver,
     ValidationError,
     WorkloadProfile,
+    parse_duration,
 )
 
 # ---------------------------------------------------------------------------
@@ -72,11 +73,114 @@ def make_profile_yaml(
 
 
 # ---------------------------------------------------------------------------
+# T009: parse_duration helper
+# ---------------------------------------------------------------------------
+
+
+class TestParseDuration:
+    def test_plain_integer_seconds(self) -> None:
+        assert parse_duration(3600) == 3600
+
+    def test_seconds_suffix(self) -> None:
+        assert parse_duration("90s") == 90
+
+    def test_minutes_suffix(self) -> None:
+        assert parse_duration("30m") == 1800
+
+    def test_hours_suffix(self) -> None:
+        assert parse_duration("24h") == 86400
+
+    def test_fractional_hours_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration("1.5h")
+
+    def test_unknown_suffix_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration("10d")
+
+    def test_zero_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration(0)
+
+    def test_negative_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration(-60)
+
+    def test_empty_string_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration("")
+
+    def test_non_numeric_body_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="duration"):
+            parse_duration("xh")
+
+
+# ---------------------------------------------------------------------------
 # T010: from_string — valid profile
 # ---------------------------------------------------------------------------
 
 
 class TestFromString:
+    def test_meta_duration_defaults_to_one_full_day(self) -> None:
+        """Omitting meta.duration should default to 86400s (one day)."""
+        yaml = textwrap.dedent("""\
+            meta:
+              interval: 60
+            host:
+              cpus: 2
+              memory_kb: 8388608
+              disks:
+                - name: sda
+              interfaces:
+                - name: eth0
+            phases:
+              - name: baseline
+                duration: 86400
+        """)
+        profile = WorkloadProfile.from_string(yaml)
+        assert profile.meta.duration == 86400
+
+    def test_meta_duration_accepts_hours_string(self) -> None:
+        yaml = textwrap.dedent("""\
+            meta:
+              duration: 24h
+              interval: 60
+            host:
+              cpus: 2
+              memory_kb: 8388608
+              disks:
+                - name: sda
+              interfaces:
+                - name: eth0
+            phases:
+              - name: baseline
+                duration: 86400
+        """)
+        profile = WorkloadProfile.from_string(yaml)
+        assert profile.meta.duration == 86400
+
+    def test_phase_duration_accepts_hours_string(self) -> None:
+        yaml = textwrap.dedent("""\
+            meta:
+              duration: 24h
+              interval: 60
+            host:
+              cpus: 2
+              memory_kb: 8388608
+              disks:
+                - name: sda
+              interfaces:
+                - name: eth0
+            phases:
+              - name: baseline
+                duration: 12h
+              - name: peak
+                duration: 12h
+        """)
+        profile = WorkloadProfile.from_string(yaml)
+        assert profile.phases[0].duration == 43200
+        assert profile.phases[1].duration == 43200
+
     def test_minimal_valid_profile_parses(self) -> None:
         profile = WorkloadProfile.from_string(MINIMAL_INLINE_HOST)
         assert profile.meta.duration == 120

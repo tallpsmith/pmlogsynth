@@ -59,7 +59,7 @@ source .venv/bin/activate
 meta:
   hostname: demo-host
   timezone: UTC
-  duration: 600
+  duration: 10m
   interval: 60
 
 host:
@@ -67,12 +67,12 @@ host:
 
 phases:
   - name: baseline
-    duration: 300
+    duration: 5m
     cpu:
       utilization: 0.15
 
   - name: spike
-    duration: 300
+    duration: 5m
     cpu:
       utilization: 0.90
 ```

@@ -24,7 +24,7 @@ where = ["."]
 include = ["pmlogsynth*"]
 
 [tool.setuptools.package-data]
-pmlogsynth = ["profiles/*.yaml"]
+pmlogsynth = ["profiles/*.yaml", "schema_context.md"]
 
 [tool.ruff]
 target-version = "py38"

@@ -192,7 +192,9 @@ def _parse_meta(raw: Any) -> ProfileMeta:
     try:
         duration = parse_duration(raw.get("duration", 86400))
     except ValidationError:
-        raise ValidationError("meta.duration must be a positive integer or duration string (e.g. '24h', '30m')")
+        raise ValidationError(
+            "meta.duration must be a positive integer or duration string (e.g. '24h', '30m')"
+        )
     interval = raw.get("interval", 60)
     if not isinstance(interval, int) or interval <= 0:
         raise ValidationError("meta.interval must be a positive integer (FR-030)")
@@ -343,7 +345,9 @@ def _parse_phases(raw: Any) -> List[Phase]:
         try:
             duration = parse_duration(p.get("duration"))
         except ValidationError:
-            raise ValidationError(f"phases[{i}].duration must be a positive integer or duration string (e.g. '1h', '30m')")
+            raise ValidationError(
+                f"phases[{i}].duration must be a positive integer or duration string (e.g. '1h')"
+            )
         transition = p.get("transition")
         if transition is not None and transition not in ("instant", "linear"):
             raise ValidationError(

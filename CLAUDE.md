@@ -131,6 +131,9 @@ pminfo -md kernel.all.cpu.vuser kernel.all.intr hinv.ncpu swap.used disk.dev.rea
 that mirrors CI exactly: mandoc lint, ruff, mypy, unit + integration tests,
 and E2E tests when PCP is available.
 
+**MANDATORY for Claude:** When asked to "commit and push" (or any variant), ALWAYS
+run `./pre-commit.sh` first and confirm it is green before pushing. No pre-commit, no push.
+
 First-time setup (macOS):
 ```bash
 ./setup-venv.sh        # creates .venv with the correct PCP-linked Python

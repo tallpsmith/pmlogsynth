@@ -17,6 +17,9 @@ pmlogsynth \- generate synthetic PCP archives from declarative YAML profiles
 \fB\-\-list\-metrics\fR
 .br
 .B pmlogsynth
+\fB\-\-show\-schema\fR
+.br
+.B pmlogsynth
 \fB\-\-validate\fR
 [\fB\-C\fR \fIDIR\fR]
 \fIPROFILE\fR
@@ -111,6 +114,17 @@ Respects
 .B \-\-list\-metrics
 Print all PCP metric names the tool can produce, one per line,
 sorted lexicographically, and exit.
+.TP
+.B \-\-show\-schema
+Print the profile schema context document (for AI agents) to stdout and exit.
+The output is the full content of the bundled schema reference that describes
+all profile fields, hardware profiles, YAML examples, and common validation
+errors.
+Suitable for piping to AI agents or redirecting to a file:
+.nf
+pmlogsynth \-\-show\-schema > context.md
+pmlogsynth \-\-show\-schema | wc \-w
+.fi
 .SH YAML PROFILE FORMAT
 A workload profile is a YAML document with three top-level sections.
 .SS meta

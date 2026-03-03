@@ -344,6 +344,20 @@ Note: 8h + 2h + 8h + 4h + 2h = 24h = meta.duration ✓
 | `meta.noise must be in [0.0, 1.0]` | Set `meta.noise` to a float between 0.0 and 1.0. |
 | `meta.start: cannot parse '...'` | Use ISO 8601 format: `2026-03-01T08:00:00Z` or `2026-03-01 08:00:00 UTC`. |
 
+### YAML format errors
+
+| Error message | Fix |
+|---------------|-----|
+| `YAML parse error: ...` | The profile YAML is malformed or incomplete. Ensure the output is valid YAML with no truncation, no markdown code fences, and no prose mixed in. |
+| `Profile must be a YAML mapping` | The profile must be a YAML mapping (key: value pairs at the top level), not a list or scalar. |
+
+### Semantic pitfalls (no error raised, but incorrect output)
+
+| Situation | Fix |
+|-----------|-----|
+| `meta.interval` (e.g. `3600`) is larger than `meta.duration` (e.g. `300`) | The archive will have zero or one sample. Set `interval` to a value smaller than `duration`. For a 5-minute archive use `interval: 60` (5 samples). |
+| Phase durations don't sum to `meta.duration` by a few seconds | Adjust one phase duration. Common mistake: using `'1h'` phases in a `'24h'` archive where 24 × 1h = 24h but rounding errors creep in. Use exact integers: `3600` × 24 = `86400`. |
+
 ---
 
 ## Duration arithmetic tips

@@ -278,6 +278,44 @@ class TestFromString:
         assert profile.phases[0].duration == 43200
         assert profile.phases[1].duration == 43200
 
+    def test_meta_interval_accepts_duration_string(self) -> None:
+        yaml = textwrap.dedent("""\
+            meta:
+              duration: 120
+              interval: 1m
+            host:
+              cpus: 2
+              memory_kb: 8388608
+              disks:
+                - name: sda
+              interfaces:
+                - name: eth0
+            phases:
+              - name: baseline
+                duration: 120
+        """)
+        profile = WorkloadProfile.from_string(yaml)
+        assert profile.meta.interval == 60
+
+    def test_meta_interval_accepts_seconds_string(self) -> None:
+        yaml = textwrap.dedent("""\
+            meta:
+              duration: 120
+              interval: 60s
+            host:
+              cpus: 2
+              memory_kb: 8388608
+              disks:
+                - name: sda
+              interfaces:
+                - name: eth0
+            phases:
+              - name: baseline
+                duration: 120
+        """)
+        profile = WorkloadProfile.from_string(yaml)
+        assert profile.meta.interval == 60
+
     def test_minimal_valid_profile_parses(self) -> None:
         profile = WorkloadProfile.from_string(MINIMAL_INLINE_HOST)
         assert profile.meta.duration == 120

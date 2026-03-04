@@ -218,8 +218,9 @@ def _parse_meta(raw: Any) -> ProfileMeta:
         raise ValidationError(
             "meta.duration must be a positive integer or duration string (e.g. '24h', '30m')"
         )
-    interval = raw.get("interval", 60)
-    if not isinstance(interval, int) or interval <= 0:
+    try:
+        interval = parse_duration(raw.get("interval", 60))
+    except ValidationError:
         raise ValidationError("meta.interval must be a positive integer (FR-030)")
     noise = float(raw.get("noise", 0.0))
     if not (0.0 <= noise <= 1.0):

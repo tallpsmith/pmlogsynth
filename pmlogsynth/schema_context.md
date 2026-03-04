@@ -35,7 +35,7 @@ Global archive settings. All fields except `duration` are optional.
 | `duration` | int or string | — | **Required.** Total archive length. Integer = seconds. Strings: `'30s'`, `'10m'`, `'24h'`, `'1d'`, `'7d'`. Must be positive. |
 | `hostname` | string | `synthetic-host` | Hostname written into the archive. |
 | `timezone` | string | `UTC` | Timezone label (informational only). |
-| `interval` | int | `60` | Seconds between samples. Must be a positive integer. |
+| `interval` | int or string | `60` | Seconds between samples. Accepts plain integer or duration string (`'60s'`, `'5m'`, `'1h'`). |
 | `noise` | float | `0.0` | Global noise amplitude [0.0–1.0] applied to all metrics. |
 | `mean_packet_bytes` | int | `1400` | Mean packet size for network byte calculations. |
 | `start` | string | today 00:00:00 UTC | Archive start time. ISO 8601 (`2026-03-01T08:00:00Z`) **or** relative offset (`-90m`, `-2h`, `-1d`). |

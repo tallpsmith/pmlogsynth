@@ -1,7 +1,7 @@
 """Profile loading, validation, and hardware profile resolution."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -12,24 +12,45 @@ class ValidationError(Exception):
     """Raised when a workload or hardware profile fails validation."""
 
 
-_DURATION_SUFFIXES = {"s": 1, "m": 60, "h": 3600}
+_SIMPLE_SUFFIXES = {"s": 1, "m": 60, "h": 3600}
 
 
 def parse_duration(raw: Any) -> int:
     """Parse a duration value to seconds.
 
-    Accepts plain integers (seconds) or strings like '30s', '10m', '24h'.
+    Accepts plain integers (seconds) or duration strings:
+    - Simple: '30s', '10m', '24h' — parsed directly, no PCP required
+    - Extended: '1d', '2days', '1h30m' — delegated to pcp_parse_interval
     Raises ValidationError for invalid formats or non-positive results.
     """
     if isinstance(raw, int):
         seconds = raw
-    elif isinstance(raw, str) and raw and raw[-1] in _DURATION_SUFFIXES:
-        multiplier = _DURATION_SUFFIXES[raw[-1]]
-        body = raw[:-1]
-        try:
-            seconds = int(body) * multiplier
-        except ValueError:
-            raise ValidationError(f"invalid duration {raw!r}: non-integer body")
+    elif isinstance(raw, str) and raw:
+        last = raw[-1]
+        if last in _SIMPLE_SUFFIXES:
+            body = raw[:-1]
+            try:
+                seconds = int(body) * _SIMPLE_SUFFIXES[last]
+            except ValueError:
+                # compound form like '1h30m' — body is not a plain int
+                from pmlogsynth.time_parsing import pcp_parse_interval
+                try:
+                    seconds = pcp_parse_interval(raw)
+                except ValidationError:
+                    raise ValidationError(
+                        f"invalid duration {raw!r}: use a positive integer (seconds) "
+                        f"or a string like '30s', '10m', '24h', '1d', '1h30m'"
+                    )
+        else:
+            # unknown suffix (e.g. 'd', 'days') — delegate to PCP
+            from pmlogsynth.time_parsing import pcp_parse_interval
+            try:
+                seconds = pcp_parse_interval(raw)
+            except ValidationError:
+                raise ValidationError(
+                    f"invalid duration {raw!r}: use a positive integer (seconds) "
+                    f"or a string like '30s', '10m', '24h', '1d', '1h30m'"
+                )
     else:
         raise ValidationError(
             f"invalid duration {raw!r}: use a positive integer (seconds) or a string "
@@ -188,30 +209,6 @@ class WorkloadProfile:
 # ---------------------------------------------------------------------------
 
 
-def _parse_start_for_meta(raw: str) -> datetime:
-    """Parse meta.start ISO 8601 string to a UTC-aware datetime."""
-    formats = [
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S+00:00",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S UTC",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S%z",
-    ]
-    for fmt in formats:
-        try:
-            dt = datetime.strptime(raw, fmt)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-        except ValueError:
-            continue
-    raise ValidationError(
-        f"meta.start: cannot parse {raw!r}. "
-        f"Use ISO 8601 (e.g. 2026-03-02T00:00:00Z) or 'YYYY-MM-DD HH:MM:SS UTC'."
-    )
-
-
 def _parse_meta(raw: Any) -> ProfileMeta:
     if not isinstance(raw, dict):
         raise ValidationError("meta must be a mapping")
@@ -229,7 +226,12 @@ def _parse_meta(raw: Any) -> ProfileMeta:
         raise ValidationError(f"meta.noise must be in [0.0, 1.0], got {noise} (FR-029)")
     start: Optional[datetime] = None
     if "start" in raw:
-        start = _parse_start_for_meta(str(raw["start"]))
+        from pmlogsynth.time_parsing import parse_absolute_timestamp, parse_relative_starttime
+        raw_start = str(raw["start"])
+        if raw_start.startswith("-") or raw_start.startswith("+"):
+            start = parse_relative_starttime(raw_start)
+        else:
+            start = parse_absolute_timestamp(raw_start, field="meta.start")
     return ProfileMeta(
         duration=duration,
         hostname=str(raw.get("hostname", "synthetic-host")),

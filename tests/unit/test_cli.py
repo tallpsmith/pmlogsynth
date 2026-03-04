@@ -8,9 +8,10 @@ import pytest
 from pmlogsynth.cli import (
     _ALL_METRIC_NAMES,
     _cmd_list_metrics,
-    _parse_start_time,
     main,
 )
+from pmlogsynth.profile import ValidationError
+from pmlogsynth.time_parsing import parse_absolute_timestamp
 
 
 def test_list_metrics_output_is_sorted() -> None:
@@ -41,7 +42,7 @@ def test_list_metrics_cmd_exits_zero(capsys: pytest.CaptureFixture) -> None:
 
 
 def test_parse_start_iso8601_z() -> None:
-    dt = _parse_start_time("2024-01-15T09:00:00Z")
+    dt = parse_absolute_timestamp("2024-01-15T09:00:00Z", field="--start")
     assert dt.year == 2024
     assert dt.month == 1
     assert dt.day == 15
@@ -50,13 +51,13 @@ def test_parse_start_iso8601_z() -> None:
 
 
 def test_parse_start_human_readable_utc() -> None:
-    dt = _parse_start_time("2024-01-15 09:00:00 UTC")
+    dt = parse_absolute_timestamp("2024-01-15 09:00:00 UTC", field="--start")
     assert dt.year == 2024 and dt.hour == 9
 
 
 def test_parse_start_invalid_raises() -> None:
-    with pytest.raises(ValueError):
-        _parse_start_time("not-a-date")
+    with pytest.raises(ValidationError):
+        parse_absolute_timestamp("not-a-date", field="--start")
 
 
 def test_fleet_subcommand_exits_2(capsys: pytest.CaptureFixture) -> None:

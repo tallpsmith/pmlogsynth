@@ -150,10 +150,30 @@ Global multiplicative Gaussian noise level, range [0.0, 1.0] (default: 0.0).
 Average packet size used for packet-count estimation (default: 1400).
 .TP
 .B start
-ISO\ 8601 timestamp (e.g.\& \fI2026-03-02T00:00:00Z\fR).
-Sets the archive start time.
+Archive start time.
+Accepts two forms:
+.RS
+.TP
+.I Absolute timestamp
+ISO\ 8601 or human-readable UTC string, e.g.\&
+\fI2026-03-02T00:00:00Z\fR or \fI2026-03-02 00:00:00 UTC\fR.
+.TP
+.I Relative offset
+A negative PCP interval prefixed with \fB\-\fR, e.g.\&
+\fI\-90m\fR, \fI\-2h\fR, \fI\-1h30m\fR, \fI\-3d\fR, \fI\-2days\fR.
+The offset is subtracted from the current clock at invocation time,
+producing an archive anchored in the recent past.
+Only past-anchored offsets are accepted;
+positive (\fB+\fR) offsets are rejected.
+.RE
+.PP
 Default: today at 00:00:00\ UTC.
 Overridden by \fB\-\-start\fR on the command line.
+.PP
+Error cases: a bare \fI\-\fR, an unrecognised interval unit
+(e.g.\& \fI\-90x\fR), or a positive offset (\fI+30m\fR) each
+produce a \fBValidationError\fR and a non-zero exit when
+combined with \fB\-\-validate\fR.
 .SS host
 Three mutually exclusive forms:
 .PP

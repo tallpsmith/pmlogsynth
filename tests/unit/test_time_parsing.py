@@ -214,10 +214,26 @@ class TestParseRelativeStarttime:
             result = self._parse("-1h")
         assert result.tzinfo is not None
 
-    def test_calls_pcp_parse_interval_with_interval_portion(self):
-        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=90) as mock_pcp:
-            self._parse("-90s")
-        mock_pcp.assert_called_once_with("90s")
+    def test_compound_offset_still_delegates_to_pcp(self):
+        """Compound forms like 1h30m can't be parsed natively — must use PCP."""
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=5400) as mock_pcp:
+            self._parse("-1h30m")
+        mock_pcp.assert_called_once_with("1h30m")
+
+    def test_minus_7d_resolves_natively_without_pcp(self):
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = self._parse("-7d")
+        assert result == _FIXED_NOW - timedelta(seconds=604800)
+        mock_pcp.assert_not_called()
+
+    def test_minus_simple_suffixes_skip_pcp(self):
+        """s/m/h/d with plain integer bodies must never hit pcp_parse_interval."""
+        cases = [("-30s", 30), ("-15m", 900), ("-2h", 7200), ("-3d", 259200)]
+        for raw, expected_offset in cases:
+            with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+                result = self._parse(raw)
+            assert result == _FIXED_NOW - timedelta(seconds=expected_offset), raw
+            mock_pcp.assert_not_called(), raw
 
     def test_positive_offset_raises_validation_error(self):
         with pytest.raises(ValidationError, match="past-anchored"):

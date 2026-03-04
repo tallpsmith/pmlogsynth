@@ -5,6 +5,26 @@ from typing import Optional
 
 from pmlogsynth.profile import ValidationError
 
+_SIMPLE_SUFFIXES = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
+def _parse_interval_natively(interval_str: str) -> Optional[int]:
+    """Return seconds for simple N<suffix> strings without invoking PCP.
+
+    Returns None for compound forms (e.g. '1h30m') or unknown suffixes
+    (e.g. '2days') so the caller can fall back to pcp_parse_interval.
+    Unlike parse_duration, zero is allowed (used for '-0s' = now).
+    """
+    if not interval_str:
+        return None
+    last = interval_str[-1]
+    if last not in _SIMPLE_SUFFIXES:
+        return None
+    try:
+        return int(interval_str[:-1]) * _SIMPLE_SUFFIXES[last]
+    except ValueError:
+        return None
+
 
 def _pmapi_parse_interval(interval_str: str) -> float:
     """Thin shim: import pcp.pmapi and call pmParseInterval. Raises on failure."""
@@ -90,5 +110,6 @@ def parse_relative_starttime(raw: str, now: Optional[datetime] = None) -> dateti
             f"meta.start: {raw!r} — missing interval after '-' (e.g. '-90m')"
         )
 
-    offset_seconds = pcp_parse_interval(interval_str)
+    native = _parse_interval_natively(interval_str)
+    offset_seconds = native if native is not None else pcp_parse_interval(interval_str)
     return now - timedelta(seconds=offset_seconds)

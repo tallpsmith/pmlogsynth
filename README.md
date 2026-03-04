@@ -1,5 +1,9 @@
 # pmlogsynth
 
+<p align="center">
+  <img src="logo-banner.jpg" width="700">
+</p>
+
 [![CI](https://github.com/tallpsmith/pmlogsynth/actions/workflows/ci.yml/badge.svg)](https://github.com/tallpsmith/pmlogsynth/actions/workflows/ci.yml)
 
 Generate synthetic [PCP](https://pcp.io/) v3 archives from declarative YAML workload

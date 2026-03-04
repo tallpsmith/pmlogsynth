@@ -12,15 +12,15 @@ class ValidationError(Exception):
     """Raised when a workload or hardware profile fails validation."""
 
 
-_SIMPLE_SUFFIXES = {"s": 1, "m": 60, "h": 3600}
+_SIMPLE_SUFFIXES = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
 
 def parse_duration(raw: Any) -> int:
     """Parse a duration value to seconds.
 
     Accepts plain integers (seconds) or duration strings:
-    - Simple: '30s', '10m', '24h' — parsed directly, no PCP required
-    - Extended: '1d', '2days', '1h30m' — delegated to pcp_parse_interval
+    - Simple: '30s', '10m', '24h', '1d' — parsed directly, no PCP required
+    - Extended: '2days', '1h30m' — delegated to pcp_parse_interval
     Raises ValidationError for invalid formats or non-positive results.
     """
     if isinstance(raw, int):

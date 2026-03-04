@@ -136,12 +136,13 @@ class TestParseDuration:
 class TestParseDurationDSuffix:
     """Tests for 'd' suffix and compound forms delegated to pcp_parse_interval."""
 
-    def test_days_suffix_delegates_to_pcp(self) -> None:
+    def test_days_suffix_no_longer_delegates_to_pcp(self) -> None:
+        """'d' is now a native suffix — PCP is not required."""
         from unittest.mock import patch
-        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=86400) as mock_pcp:
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
             result = parse_duration("1d")
         assert result == 86400
-        mock_pcp.assert_called_once_with("1d")
+        mock_pcp.assert_not_called()
 
     def test_two_days_via_pcp(self) -> None:
         from unittest.mock import patch
@@ -175,6 +176,40 @@ class TestParseDurationDSuffix:
             result = parse_duration("30m")
         assert result == 1800
         mock_pcp.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# T007b: parse_duration — d suffix native (no PCP required)
+# ---------------------------------------------------------------------------
+
+
+class TestParseDurationNativeDSuffix:
+    """'d' suffix must resolve natively without delegating to pcp_parse_interval."""
+
+    def test_1d_resolves_natively_without_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = parse_duration("1d")
+        assert result == 86400
+        mock_pcp.assert_not_called()
+
+    def test_2d_resolves_natively_without_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = parse_duration("2d")
+        assert result == 172800
+        mock_pcp.assert_not_called()
+
+    def test_7d_resolves_natively_without_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = parse_duration("7d")
+        assert result == 604800
+        mock_pcp.assert_not_called()
+
+    def test_0d_still_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="positive"):
+            parse_duration("0d")
 
 
 # ---------------------------------------------------------------------------

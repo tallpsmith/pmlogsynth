@@ -32,20 +32,20 @@ Global archive settings. All fields except `duration` are optional.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `duration` | int or string | — | **Required.** Total archive length. Integer = seconds. Strings: `'30s'`, `'10m'`, `'24h'`. Must be positive. |
+| `duration` | int or string | — | **Required.** Total archive length. Integer = seconds. Strings: `'30s'`, `'10m'`, `'24h'`, `'1d'`, `'7d'`. Must be positive. |
 | `hostname` | string | `synthetic-host` | Hostname written into the archive. |
 | `timezone` | string | `UTC` | Timezone label (informational only). |
 | `interval` | int | `60` | Seconds between samples. Must be a positive integer. |
 | `noise` | float | `0.0` | Global noise amplitude [0.0–1.0] applied to all metrics. |
 | `mean_packet_bytes` | int | `1400` | Mean packet size for network byte calculations. |
-| `start` | string | today 00:00:00 UTC | Archive start time. ISO 8601: `2026-03-01T08:00:00Z` or `2026-03-01 08:00:00 UTC`. |
+| `start` | string | today 00:00:00 UTC | Archive start time. ISO 8601 (`2026-03-01T08:00:00Z`) **or** relative offset (`-90m`, `-2h`, `-1d`). |
 
 ### meta validation rules
 
-- `duration` must be a positive integer (seconds) or a duration string (`'30s'`, `'10m'`, `'24h'`).
+- `duration` must be a positive integer (seconds) or a duration string (`'30s'`, `'10m'`, `'24h'`, `'1d'`).
 - `interval` must be a positive integer.
 - `noise` must be in the range [0.0, 1.0].
-- `start` must be parseable as ISO 8601.
+- `start` must be an ISO 8601 timestamp or a relative offset (e.g. `-90m`, `-2h`, `-1d`).
 
 ---
 
@@ -307,8 +307,8 @@ Note: 8h + 2h + 8h + 4h + 2h = 24h = meta.duration ✓
 | Error message | Fix |
 |---------------|-----|
 | `Sum of phase durations (Xs) does not equal meta.duration (Ys) (FR-027)` | Adjust phase durations to sum to exactly `meta.duration`. |
-| `invalid duration '...': use a positive integer or a string like '30s', '10m', '24h'` | Use seconds as an integer, or a string like `'1h'`, `'30m'`, `'600s'`. |
-| `meta.duration must be a positive integer or duration string` | Set `meta.duration` to a positive int or a string like `'24h'`. |
+| `invalid duration '...': use a positive integer or a string like '30s', '10m', '24h'` | Use seconds as an integer, or a string like `'1h'`, `'30m'`, `'600s'`, `'1d'`. |
+| `meta.duration must be a positive integer or duration string` | Set `meta.duration` to a positive int or a string like `'24h'`, `'1d'`, `'7d'`. |
 | `phases[N].duration must be a positive integer or duration string` | Fix the duration in the Nth phase. |
 
 ### CPU errors
@@ -342,7 +342,7 @@ Note: 8h + 2h + 8h + 4h + 2h = 24h = meta.duration ✓
 |---------------|-----|
 | `meta.interval must be a positive integer (FR-030)` | Set `meta.interval` to a positive integer (seconds). |
 | `meta.noise must be in [0.0, 1.0]` | Set `meta.noise` to a float between 0.0 and 1.0. |
-| `meta.start: cannot parse '...'` | Use ISO 8601 format: `2026-03-01T08:00:00Z` or `2026-03-01 08:00:00 UTC`. |
+| `meta.start: cannot parse '...'` | Use ISO 8601 (`2026-03-01T08:00:00Z`) or a relative offset (`-90m`, `-2h`, `-1d`). |
 
 ### YAML format errors
 

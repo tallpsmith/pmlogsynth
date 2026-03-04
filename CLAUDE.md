@@ -6,6 +6,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-01
 - Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as (003-dx-improvements)
 - Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML (004-pmrep-view-support)
 - PCP v3 binary archive files (004-pmrep-view-support)
+- Python 3.8+ + PyYAML, `pcp.pmapi` (system `python3-pcp`) — existing hard dependency (006-relative-starttime)
+- N/A — tool generates PCP binary archive files (006-relative-starttime)
 
 - **Language**: Python 3.8+ (minimum); system Python tested in CI with PCP installed
 - **Archive writing**: `pcp.pmi.pmiLogImport` via `python3-pcp` system package
@@ -85,9 +87,9 @@ pmlogsynth --list-metrics
 - No NumPy — use `random.gauss` from stdlib
 
 ## Recent Changes
+- 006-relative-starttime: Added Python 3.8+ + PyYAML, `pcp.pmapi` (system `python3-pcp`) — existing hard dependency
 - 004-pmrep-view-support: Added Python 3.8+ + `pcp.pmi` (system package `python3-pcp`), PyYAML
 - 003-dx-improvements: Added Bash (pre-commit.sh); Markdown (README.md); Python 3.8+ (new unit tests) + mandoc (system package; apt/brew) for man page validation; groff as
-- 002-phase2-e2e-docs: Added Python 3.8+ (minimum); latest stable tested in CI matrix + pytest, pcp.pmi (system package), PyYAML
 
   PyYAML + pcp.pmi, three-tier test strategy, CI-first delivery
 

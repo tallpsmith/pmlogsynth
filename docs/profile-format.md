@@ -13,14 +13,47 @@ Global archive metadata.
 |-------|------|---------|-------------|
 | `hostname` | string | `synthetic-host` | — |
 | `timezone` | string | `UTC` | Any valid timezone string |
-| `duration` | integer | required | Positive; must equal sum of phase durations unless `repeat` is used |
+| `duration` | int or string | `86400` | Positive; must equal sum of phase durations unless `repeat` is used. Accepts `30s`, `10m`, `24h`, `1d`, `1h30m`. |
 | `interval` | integer | `60` | Positive integer (seconds) |
 | `noise` | float | `0.0` | Range [0.0, 1.0] |
 | `mean_packet_bytes` | integer | `1400` | Positive |
-| `start` | string | today 00:00:00 UTC | ISO 8601 timestamp (e.g. `2026-03-02T00:00:00Z`). Sets archive start time. Overridden by CLI `--start`. |
+| `start` | string | today 00:00:00 UTC | Absolute ISO 8601 timestamp **or** relative offset (see below). Overridden by CLI `--start`. |
+
+### `meta.start` — absolute and relative forms
+
+**Absolute** (existing behaviour): ISO 8601 or human-readable UTC string.
+
+```yaml
+meta:
+  start: "2026-03-02T00:00:00Z"       # ISO 8601 with Z
+  start: "2026-03-02T00:00:00+00:00"  # ISO 8601 with offset
+  start: "2026-03-02T00:00:00"        # bare T separator
+  start: "2026-03-02 00:00:00 UTC"    # space-separated with UTC
+  start: "2026-03-02 00:00:00"        # space-separated (assumed UTC)
+```
+
+**Relative** (new): a PCP interval string prefixed with `-`, resolved against
+the clock at invocation time.
+
+```yaml
+meta:
+  start: -90m      # 90 minutes ago
+  start: -2h       # 2 hours ago
+  start: -1h30m    # 1 hour 30 minutes ago
+  start: -3d       # 3 days ago
+  start: -2days    # same — PCP long-form accepted
+  start: -0s       # now (zero offset)
+```
+
+Relative offsets produce an archive anchored in the recent past — useful for
+replaying synthetic incidents as if they just happened. Positive offsets
+(`+30m`) and bare `-` are rejected with a descriptive `ValidationError`.
 
 **Archive start time priority** (highest wins):
 `CLI --start` > `meta.start` (YAML) > today midnight UTC (default)
+
+> **Note**: CLI `--start` accepts absolute timestamps only. Relative offsets
+> (`-90m`) are only supported in the profile's `meta.start` field.
 
 Omitting `meta.start` anchors every run to today's midnight UTC, so phase labels
 (overnight, peak, etc.) land at their intended clock positions regardless of when
@@ -79,7 +112,7 @@ all phase durations must equal `meta.duration`.
 | Field | Type | Default | Constraints |
 |-------|------|---------|-------------|
 | `name` | string | required | Unique identifier |
-| `duration` | integer | required | Positive seconds |
+| `duration` | int or string | required | Positive. Accepts plain integer (seconds) or duration string: `30s`, `10m`, `24h`, `1d`, `1h30m`. |
 | `transition` | string | `instant` | `instant` or `linear`; first phase cannot use `linear` |
 | `repeat` | string or integer | — | `daily` or positive integer count |
 | `cpu` | object | — | See CPU stressor below |

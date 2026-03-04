@@ -165,17 +165,29 @@ match `docs/spike.yml` exactly. If one changes, update the other.
 
 ## Developer Experience Docs — MANDATORY
 
-**`man/pmlogsynth.1`, `README.md`, and `CONTRIBUTING.md` form the developer experience
-triad.** Before completing any feature or bug fix, ask: "Does this touch the CLI surface,
-user workflow, or contributor setup?" If yes, update all three as needed:
+**`man/pmlogsynth.1`, `README.md`, `CONTRIBUTING.md`, and `docs/profile-format.md`
+form the developer experience quad.** Before completing any feature or bug fix, ask:
+"Does this touch the CLI surface, YAML schema, user workflow, or contributor setup?"
+If yes, update all relevant docs:
 
-- **`man/pmlogsynth.1`** — CLI flags, subcommands, YAML schema, exit codes, file paths
-- **`README.md`** — Quick Start steps, bundled hardware profiles table, metrics count,
-  any new user-facing capabilities (AI tools, new flags, new output files)
-- **`CONTRIBUTING.md`** — dev setup steps, test tier table, PR conventions
+- **`man/pmlogsynth.1`** — CLI flags, subcommands, YAML schema, exit codes, file paths.
+  Authoritative CLI reference.
+- **`docs/profile-format.md`** — Full YAML schema: every field, type, default, constraint,
+  and accepted format. **Must be updated whenever the profile schema changes** — new fields,
+  changed types, new accepted formats (e.g. duration strings, relative timestamps). Also
+  fed to AI agents via `--show-schema`, so accuracy is critical.
+- **`README.md`** — Quick Start steps, bundled hardware profiles table, metrics count
+  (keep in sync with `len(_ALL_METRIC_NAMES)`), any new user-facing capabilities.
+- **`CONTRIBUTING.md`** — dev setup steps, test tier table, PR conventions.
+
+**Specific invariants to check on every schema-touching PR:**
+- `docs/profile-format.md` field table types match what `parse_duration` / `_parse_meta` actually accept
+- `meta.start` section covers both absolute and relative forms
+- Metric count in `README.md` matches `len(_ALL_METRIC_NAMES)` in `cli.py`
+- Man page duration descriptions match accepted string forms
+- Man page EXAMPLES section includes an example for any newly supported input form
 
 New user-facing tools (e.g. Claude skills, new informational flags) must appear in
 `README.md`. New dev workflow requirements (e.g. new quality gate steps) must appear in
-`CONTRIBUTING.md`. The man page covers the authoritative CLI reference; README covers
-the getting-started narrative; CONTRIBUTING covers the contributor workflow.
+`CONTRIBUTING.md`.
 <!-- MANUAL ADDITIONS END -->

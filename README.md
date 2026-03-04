@@ -1,7 +1,7 @@
 # pmlogsynth
 
 <p align="center">
-  <img src="logo-banner.jpg" width="700">
+  <img src="logo-banner.jpg" width="500">
 </p>
 
 [![CI](https://github.com/tallpsmith/pmlogsynth/actions/workflows/ci.yml/badge.svg)](https://github.com/tallpsmith/pmlogsynth/actions/workflows/ci.yml)

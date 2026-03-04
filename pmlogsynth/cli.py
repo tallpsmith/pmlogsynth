@@ -2,7 +2,6 @@
 
 import argparse
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -183,35 +182,6 @@ def _add_generate_args(p: argparse.ArgumentParser) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Timestamp parsing
-# ---------------------------------------------------------------------------
-
-def _parse_start_time(ts: str) -> datetime:
-    """Parse --start argument into a UTC-aware datetime."""
-    formats = [
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S+00:00",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S UTC",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S%z",
-    ]
-    for fmt in formats:
-        try:
-            dt = datetime.strptime(ts, fmt)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-        except ValueError:
-            continue
-    raise ValueError(
-        f"Cannot parse --start timestamp {ts!r}. "
-        f"Use ISO 8601 (e.g. 2024-01-15T09:00:00Z) or "
-        f"'YYYY-MM-DD HH:MM:SS UTC'."
-    )
-
-
-# ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
 
@@ -301,9 +271,10 @@ def _cmd_generate(args: argparse.Namespace) -> int:
     # Parse start time
     start_time = None
     if args.start:
+        from pmlogsynth.time_parsing import parse_absolute_timestamp
         try:
-            start_time = _parse_start_time(args.start)
-        except ValueError as exc:
+            start_time = parse_absolute_timestamp(args.start, field="--start")
+        except ValidationError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
 

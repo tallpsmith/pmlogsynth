@@ -151,6 +151,25 @@ and constraints — is in [`docs/profile-format.md`](docs/profile-format.md).
 A complete, ready-to-run example covering all four stressor domains is in
 [`docs/complete-example.yml`](docs/complete-example.yml).
 
+### Relative start times
+
+The `meta.start` field accepts a **relative offset** in addition to absolute
+ISO 8601 timestamps.  A relative offset is a PCP interval string prefixed with
+`-`, resolved against the clock at invocation time:
+
+```yaml
+meta:
+  start: -90m      # 90 minutes ago
+  start: -2h       # 2 hours ago
+  start: -1h30m    # 1 hour 30 minutes ago
+  start: -3d       # 3 days ago
+  start: -2days    # same — PCP interval strings accepted
+```
+
+This is useful for replaying realistic-looking archives anchored to "now" —
+for example, a simulated spike that started an hour ago.  Positive offsets
+(`+30m`) and bare `-` are rejected with a descriptive error.
+
 ---
 
 ## Metrics

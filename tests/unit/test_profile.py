@@ -91,12 +91,25 @@ class TestParseDuration:
         assert parse_duration("24h") == 86400
 
     def test_fractional_hours_rejected(self) -> None:
-        with pytest.raises(ValidationError, match="duration"):
-            parse_duration("1.5h")
+        # "1.5h" has known suffix 'h' but non-int body — falls through to PCP,
+        # which also rejects it (mocked here for Tier 1)
+        from unittest.mock import patch
+        with patch(
+            "pmlogsynth.time_parsing.pcp_parse_interval",
+            side_effect=ValidationError("invalid interval"),
+        ):
+            with pytest.raises(ValidationError, match="duration"):
+                parse_duration("1.5h")
 
     def test_unknown_suffix_rejected(self) -> None:
-        with pytest.raises(ValidationError, match="duration"):
-            parse_duration("10d")
+        # After T010, unknown suffixes delegate to PCP; mock PCP rejecting it
+        from unittest.mock import patch
+        with patch(
+            "pmlogsynth.time_parsing.pcp_parse_interval",
+            side_effect=ValidationError("invalid interval"),
+        ):
+            with pytest.raises(ValidationError, match="duration"):
+                parse_duration("10x")
 
     def test_zero_rejected(self) -> None:
         with pytest.raises(ValidationError, match="duration"):
@@ -113,6 +126,55 @@ class TestParseDuration:
     def test_non_numeric_body_rejected(self) -> None:
         with pytest.raises(ValidationError, match="duration"):
             parse_duration("xh")
+
+
+# ---------------------------------------------------------------------------
+# T007: parse_duration — d suffix and compound forms (via pcp_parse_interval)
+# ---------------------------------------------------------------------------
+
+
+class TestParseDurationDSuffix:
+    """Tests for 'd' suffix and compound forms delegated to pcp_parse_interval."""
+
+    def test_days_suffix_delegates_to_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=86400) as mock_pcp:
+            result = parse_duration("1d")
+        assert result == 86400
+        mock_pcp.assert_called_once_with("1d")
+
+    def test_two_days_via_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=172800):
+            result = parse_duration("2d")
+        assert result == 172800
+
+    def test_compound_1h30m_via_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=5400):
+            result = parse_duration("1h30m")
+        assert result == 5400
+
+    def test_zero_via_pcp_still_rejected(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval", return_value=0):
+            with pytest.raises(ValidationError, match="positive"):
+                parse_duration("0d")
+
+    def test_existing_h_suffix_still_works_without_pcp(self) -> None:
+        """Existing single-unit suffixes (s/m/h) with integer body skip PCP."""
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = parse_duration("24h")
+        assert result == 86400
+        mock_pcp.assert_not_called()
+
+    def test_existing_m_suffix_still_works_without_pcp(self) -> None:
+        from unittest.mock import patch
+        with patch("pmlogsynth.time_parsing.pcp_parse_interval") as mock_pcp:
+            result = parse_duration("30m")
+        assert result == 1800
+        mock_pcp.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

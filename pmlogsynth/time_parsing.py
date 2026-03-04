@@ -13,8 +13,8 @@ def _pmapi_parse_interval(interval_str: str) -> float:
     except ImportError as exc:
         raise ImportError(f"PCP not available: {exc}") from exc
     ctx = pmapi.pmContext()
-    result = ctx.pmParseInterval(interval_str)
-    return float(result)
+    ts, _errmsg = ctx.pmParseInterval(interval_str)
+    return float(ts.tv_sec) + float(ts.tv_nsec) / 1e9
 
 
 def pcp_parse_interval(interval_str: str) -> int:

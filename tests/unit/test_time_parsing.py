@@ -8,6 +8,50 @@ import pytest
 from pmlogsynth.profile import ValidationError
 
 # ---------------------------------------------------------------------------
+# T001: _pmapi_parse_interval — raw PCP shim
+# ---------------------------------------------------------------------------
+
+
+def _make_timespec(tv_sec: int, tv_nsec: int = 0):
+    from unittest.mock import MagicMock
+    ts = MagicMock()
+    ts.tv_sec = tv_sec
+    ts.tv_nsec = tv_nsec
+    return ts
+
+
+class TestPmapiParseInterval:
+    """Tests for _pmapi_parse_interval — verifies tuple unpacking from pmParseInterval."""
+
+    def _call(self, interval_str: str, tv_sec: int, tv_nsec: int = 0) -> float:
+        from pmlogsynth.time_parsing import _pmapi_parse_interval
+        ts = _make_timespec(tv_sec, tv_nsec)
+        with patch("pcp.pmapi.pmContext") as mock_class:
+            mock_class.return_value.pmParseInterval.return_value = (ts, "")
+            return _pmapi_parse_interval(interval_str)
+
+    def test_seconds_extracted_from_tv_sec(self):
+        assert self._call("90s", tv_sec=90) == 90.0
+
+    def test_days_extracted_correctly(self):
+        assert self._call("7d", tv_sec=7 * 86400) == 7 * 86400.0
+
+    def test_subsecond_precision_via_tv_nsec(self):
+        result = self._call("1.5s", tv_sec=1, tv_nsec=500_000_000)
+        assert abs(result - 1.5) < 1e-9
+
+    def test_returns_float(self):
+        assert isinstance(self._call("60s", tv_sec=60), float)
+
+    def test_pcp_exception_propagates(self):
+        from pmlogsynth.time_parsing import _pmapi_parse_interval
+        with patch("pcp.pmapi.pmContext") as mock_class:
+            mock_class.return_value.pmParseInterval.side_effect = RuntimeError("bad unit")
+            with pytest.raises(RuntimeError, match="bad unit"):
+                _pmapi_parse_interval("99x")
+
+
+# ---------------------------------------------------------------------------
 # T002: pcp_parse_interval
 # ---------------------------------------------------------------------------
 

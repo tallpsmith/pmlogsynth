@@ -38,7 +38,7 @@ def test_metric_descriptors_count() -> None:
     model = NetworkMetricModel()
     hw = _hw_two_ifaces()
     descriptors = model.metric_descriptors(hw)
-    assert len(descriptors) == 4
+    assert len(descriptors) == 12
 
 
 def test_metric_descriptors_names() -> None:
@@ -49,6 +49,94 @@ def test_metric_descriptors_names() -> None:
     assert "network.interface.out.bytes" in names
     assert "network.interface.in.packets" in names
     assert "network.interface.out.packets" in names
+
+
+# ---------------------------------------------------------------------------
+# T021-1b: Corrected PMIDs match real Linux PMDA
+# ---------------------------------------------------------------------------
+
+
+def test_per_interface_pmids_match_linux_pmda() -> None:
+    """Per-interface PMIDs use CLUSTER_NET_DEV=3 with Linux item numbers."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    # ifInOctets=0, ifInUcastPkts=1, ifOutOctets=8, ifOutUcastPkts=9
+    assert by_name["network.interface.in.bytes"].pmid == (60, 3, 0)
+    assert by_name["network.interface.in.packets"].pmid == (60, 3, 1)
+    assert by_name["network.interface.out.bytes"].pmid == (60, 3, 8)
+    assert by_name["network.interface.out.packets"].pmid == (60, 3, 9)
+
+
+def test_per_interface_error_pmids() -> None:
+    """Error descriptors use ifInErrors=2, ifOutErrors=10."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.interface.in.errors"].pmid == (60, 3, 2)
+    assert by_name["network.interface.out.errors"].pmid == (60, 3, 10)
+
+
+def test_per_interface_error_descriptors_have_indom() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.interface.in.errors"].indom == (60, 2)
+    assert by_name["network.interface.out.errors"].indom == (60, 2)
+
+
+def test_aggregate_pmids_use_cluster_90() -> None:
+    """Aggregate PMIDs use CLUSTER_NET_ALL=90."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.all.in.bytes"].pmid == (60, 90, 0)
+    assert by_name["network.all.in.packets"].pmid == (60, 90, 1)
+    assert by_name["network.all.in.errors"].pmid == (60, 90, 2)
+    assert by_name["network.all.out.bytes"].pmid == (60, 90, 4)
+    assert by_name["network.all.out.packets"].pmid == (60, 90, 5)
+    assert by_name["network.all.out.errors"].pmid == (60, 90, 6)
+
+
+def test_aggregate_descriptors_have_no_indom() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    for name in [
+        "network.all.in.bytes",
+        "network.all.out.bytes",
+        "network.all.in.packets",
+        "network.all.out.packets",
+        "network.all.in.errors",
+        "network.all.out.errors",
+    ]:
+        assert by_name[name].indom is None, f"{name} should have indom=None"
+
+
+def test_descriptor_names_complete() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    names = {d.name for d in model.metric_descriptors(hw)}
+    expected = {
+        "network.interface.in.bytes",
+        "network.interface.out.bytes",
+        "network.interface.in.packets",
+        "network.interface.out.packets",
+        "network.interface.in.errors",
+        "network.interface.out.errors",
+        "network.all.in.bytes",
+        "network.all.out.bytes",
+        "network.all.in.packets",
+        "network.all.out.packets",
+        "network.all.in.errors",
+        "network.all.out.errors",
+    }
+    assert names == expected
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +152,10 @@ def test_instance_names_match_hardware_interfaces() -> None:
     result = model.compute(stressor, hw, interval=60, sampler=sampler)
 
     for metric_name in result:
+        if metric_name.startswith("network.all."):
+            # Aggregate metrics have no instances
+            assert set(result[metric_name].keys()) == {None}
+            continue
         instance_keys = set(result[metric_name].keys())
         assert instance_keys == {"eth0", "eth1"}, (
             "Expected instances {{eth0, eth1}}, got {} for {}".format(
@@ -209,3 +301,191 @@ def test_two_interfaces_each_get_half_the_bytes() -> None:
         "Each of two NICs should get half the bytes"
     )
     assert eth0_two == eth1_two, "Both NICs should get equal bytes"
+
+
+# ---------------------------------------------------------------------------
+# T021-9: Aggregate metrics accumulate correctly
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_bytes_accumulate() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=5.0)
+
+    result1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    result2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    assert result1["network.all.in.bytes"][None] > 0
+    assert result2["network.all.in.bytes"][None] > result1["network.all.in.bytes"][None]
+    assert result1["network.all.out.bytes"][None] > 0
+    assert result2["network.all.out.bytes"][None] > result1["network.all.out.bytes"][None]
+
+
+def test_aggregate_packets_accumulate() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=5.0)
+
+    result1 = model.compute(stressor, hw, interval=60, sampler=sampler)
+    result2 = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    assert result1["network.all.in.packets"][None] > 0
+    assert result2["network.all.in.packets"][None] > result1["network.all.in.packets"][None]
+
+
+# ---------------------------------------------------------------------------
+# T021-10: Sum of per-interface == aggregate (exact match)
+# ---------------------------------------------------------------------------
+
+
+def test_sum_per_interface_equals_aggregate_bytes() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=20.0, tx_mbps=10.0)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    per_iface_in = sum(result["network.interface.in.bytes"].values())
+    per_iface_out = sum(result["network.interface.out.bytes"].values())
+
+    assert per_iface_in == result["network.all.in.bytes"][None]
+    assert per_iface_out == result["network.all.out.bytes"][None]
+
+
+def test_sum_per_interface_equals_aggregate_packets() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=20.0, tx_mbps=10.0)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    per_iface_in = sum(result["network.interface.in.packets"].values())
+    per_iface_out = sum(result["network.interface.out.packets"].values())
+
+    assert per_iface_in == result["network.all.in.packets"][None]
+    assert per_iface_out == result["network.all.out.packets"][None]
+
+
+def test_sum_per_interface_equals_aggregate_errors() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=20.0, tx_mbps=10.0, error_rate=0.01)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    per_iface_in = sum(result["network.interface.in.errors"].values())
+    per_iface_out = sum(result["network.interface.out.errors"].values())
+
+    assert per_iface_in == result["network.all.in.errors"][None]
+    assert per_iface_out == result["network.all.out.errors"][None]
+
+
+# ---------------------------------------------------------------------------
+# T021-11: Error metrics behavior
+# ---------------------------------------------------------------------------
+
+
+def test_error_rate_none_produces_zero_errors() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=5.0)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    assert result["network.all.in.errors"][None] == 0
+    assert result["network.all.out.errors"][None] == 0
+    assert result["network.interface.in.errors"]["eth0"] == 0
+    assert result["network.interface.out.errors"]["eth0"] == 0
+
+
+def test_error_rate_zero_produces_zero_errors() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=5.0, error_rate=0.0)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    assert result["network.all.in.errors"][None] == 0
+    assert result["network.all.out.errors"][None] == 0
+
+
+def test_error_rate_produces_proportional_errors() -> None:
+    model = NetworkMetricModel(mean_packet_bytes=1400)
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    error_rate = 0.01
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=0.0, error_rate=error_rate)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    # 10 * 1024 * 1024 * 60 / 1400 = 449389.7... packets
+    # 449389.7 * 0.01 = 4493.897... errors → int(4493.897) = 4493
+    expected_packets = 10 * 1024 * 1024 * 60 / 1400
+    expected_errors = int(expected_packets * error_rate)
+    assert result["network.all.in.errors"][None] == expected_errors
+
+
+def test_errors_split_evenly_across_interfaces() -> None:
+    model = NetworkMetricModel(mean_packet_bytes=1400)
+    hw = _hw_two_ifaces()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=20.0, error_rate=0.01)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    eth0_err = result["network.interface.in.errors"]["eth0"]
+    eth1_err = result["network.interface.in.errors"]["eth1"]
+    assert eth0_err == eth1_err, "Errors should split evenly"
+    assert eth0_err > 0
+
+
+# ---------------------------------------------------------------------------
+# T021-12: Edge cases with aggregates
+# ---------------------------------------------------------------------------
+
+
+def _hw_no_ifaces() -> HardwareProfile:
+    return HardwareProfile(
+        name="test",
+        cpus=2,
+        memory_kb=8388608,
+        disks=[],
+        interfaces=[],
+    )
+
+
+def test_zero_interfaces_aggregates_still_computed() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_no_ifaces()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=10.0, tx_mbps=5.0)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    # Aggregates should still have values
+    assert "network.all.in.bytes" in result
+    assert result["network.all.in.bytes"][None] > 0
+    # Per-interface dicts should be empty
+    assert result["network.interface.in.bytes"] == {}
+
+
+def test_zero_traffic_produces_all_zero_counters() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_one_iface()
+    sampler = _sampler()
+    stressor = NetworkStressor(rx_mbps=0.0, tx_mbps=0.0, error_rate=0.01)
+
+    result = model.compute(stressor, hw, interval=60, sampler=sampler)
+
+    assert result["network.all.in.bytes"][None] == 0
+    assert result["network.all.out.bytes"][None] == 0
+    assert result["network.all.in.errors"][None] == 0
+    assert result["network.all.out.errors"][None] == 0

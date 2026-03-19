@@ -265,6 +265,7 @@ network:
   rx_mbps: 500.0        # receive throughput MB/s, default 0.0
   tx_mbps: 100.0        # transmit throughput MB/s, default 0.0
   noise: 0.03           # per-domain noise override
+  error_rate: 0.001     # fraction of packets that are errors [0.0-1.0], default 0.0
 ```
 
 ---

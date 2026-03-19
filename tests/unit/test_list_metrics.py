@@ -6,7 +6,7 @@ from typing import Set
 
 import pytest
 
-# Expected 63 metric names (53 previous + 10 metadata from 007)
+# Expected 71 metric names (63 previous + 8 network aggregate/error)
 EXPECTED_METRICS: Set[str] = {
     # Existing metrics
     "disk.all.read",
@@ -33,6 +33,15 @@ EXPECTED_METRICS: Set[str] = {
     "network.interface.in.packets",
     "network.interface.out.bytes",
     "network.interface.out.packets",
+    # New network aggregate + error metrics
+    "network.all.in.bytes",
+    "network.all.in.errors",
+    "network.all.in.packets",
+    "network.all.out.bytes",
+    "network.all.out.errors",
+    "network.all.out.packets",
+    "network.interface.in.errors",
+    "network.interface.out.errors",
     # New CPU sub-metrics
     "kernel.all.cpu.nice",
     "kernel.all.cpu.vuser",
@@ -96,9 +105,9 @@ def _capture_list_metrics() -> list:
 
 @pytest.mark.unit
 def test_list_metrics_contains_53_names() -> None:
-    """--list-metrics output contains exactly 63 metric names."""
+    """--list-metrics output contains exactly 71 metric names."""
     lines = _capture_list_metrics()
-    assert len(lines) == 63, f"Expected 63 metrics, got {len(lines)}: {lines}"
+    assert len(lines) == 71, f"Expected 71 metrics, got {len(lines)}: {lines}"
 
 
 @pytest.mark.unit

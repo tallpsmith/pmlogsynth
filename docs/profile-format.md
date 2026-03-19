@@ -100,6 +100,60 @@ host:
 **Validation error**: mixing `profile:` with inline fields (`cpus`, `memory_kb`, etc.)
 without an `overrides:` key is rejected.
 
+### `os:` section (optional)
+
+Controls OS metadata written into the archive. The entire section is optional —
+all fields have sensible defaults matching a typical Linux x86_64 host.
+Override via `host.overrides.os:` when using a named hardware profile.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `sysname` | string | `"Linux"` | OS name |
+| `nodename` | string | `null` (falls back to `meta.hostname`) | Hostname |
+| `release` | string | `"5.15.0-91-generic"` | Kernel release |
+| `version` | string | `"#1 SMP PREEMPT_DYNAMIC"` | Kernel version string |
+| `machine` | string | `"x86_64"` | Hardware architecture |
+| `distro` | string | `"Ubuntu 22.04.3 LTS"` | Distribution name |
+| `pagesize` | integer | `4096` | System page size in bytes |
+
+**Example — inline `os:` block:**
+
+```yaml
+host:
+  profile: generic-large
+  os:
+    release: "6.1.0-18-amd64"
+    distro: "Debian GNU/Linux 12 (bookworm)"
+    machine: aarch64
+    pagesize: 65536
+```
+
+**Example — override via `host.overrides.os:`:**
+
+```yaml
+host:
+  profile: generic-large
+  overrides:
+    cpus: 16
+    os:
+      distro: "Red Hat Enterprise Linux 9.3"
+```
+
+The `os:` block populates the following archive metrics:
+
+| Metric | Description |
+|--------|-------------|
+| `kernel.uname.sysname` | OS name string |
+| `kernel.uname.nodename` | Hostname string |
+| `kernel.uname.release` | Kernel release string |
+| `kernel.uname.version` | Kernel version string |
+| `kernel.uname.machine` | Hardware architecture string |
+| `kernel.uname.distro` | Distribution name string |
+| `hinv.ndisk` | Number of disk devices |
+| `hinv.physmem` | Total physical RAM (kibibytes) |
+| `hinv.pagesize` | System page size (bytes) |
+| `hinv.ninterface` | Number of network interfaces |
+
 ---
 
 ## `phases`

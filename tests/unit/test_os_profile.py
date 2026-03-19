@@ -6,15 +6,12 @@ from pathlib import Path
 import pytest
 
 from pmlogsynth.profile import (
-    DiskDevice,
     HardwareProfile,
-    NetworkInterface,
     OsProfile,
     ValidationError,
     _apply_overrides,
     _load_hardware_profile,
 )
-
 
 # ---------------------------------------------------------------------------
 # Task 2: OsProfile dataclass defaults and construction

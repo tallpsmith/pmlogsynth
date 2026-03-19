@@ -6,7 +6,6 @@ from pmlogsynth.pcp_constants import (
     PM_TYPE_STRING,
     PM_TYPE_U32,
     PM_TYPE_U64,
-    UNITS_NONE,
 )
 from pmlogsynth.profile import (
     DiskDevice,

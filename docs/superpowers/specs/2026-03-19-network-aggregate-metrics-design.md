@@ -112,10 +112,10 @@ Guarantees `sum(per-interface) == all.*` exactly.
 |------|--------|
 | `pmlogsynth/profile.py` | Add `error_rate: Optional[float]` to `NetworkStressor`; update `_parse_network_stressor()` with range validation |
 | `pmlogsynth/domains/network.py` | Fix 4 PMIDs, add 8 descriptors, update `compute()` for aggregates + errors |
-| `pmlogsynth/cli.py` | Add 8 metric names to `_ALL_METRIC_NAMES` (64 → 72) |
+| `pmlogsynth/cli.py` | Add 8 metric names to `_ALL_METRIC_NAMES` (63 → 71) |
 | `docs/profile-format.md` | Document `error_rate` field |
 | `man/pmlogsynth.1` | Update network metrics list |
-| `README.md` | Update metric count (64 → 72) |
+| `README.md` | Update metric count (63 → 71) |
 | Tests | Full TDD (see test plan below) |
 
 ## Test Plan

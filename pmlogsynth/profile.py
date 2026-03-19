@@ -79,12 +79,25 @@ class NetworkInterface:
 
 
 @dataclass
+class OsProfile:
+    """OS identity metadata — embedded in hardware profiles."""
+    sysname: str = "Linux"
+    nodename: Optional[str] = None  # defaults to meta.hostname at resolve time
+    release: str = "5.15.0-91-generic"
+    version: str = "#1 SMP PREEMPT_DYNAMIC"
+    machine: str = "x86_64"
+    distro: str = "Ubuntu 22.04.3 LTS"
+    pagesize: int = 4096
+
+
+@dataclass
 class HardwareProfile:
     name: str
     cpus: int
     memory_kb: int
     disks: List[DiskDevice] = field(default_factory=list)
     interfaces: List[NetworkInterface] = field(default_factory=list)
+    os_profile: OsProfile = field(default_factory=OsProfile)
 
 
 # ---------------------------------------------------------------------------

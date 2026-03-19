@@ -178,7 +178,7 @@ for example, a simulated spike that started an hour ago.  Positive offsets
 
 ## Metrics
 
-63 PCP metrics — `pmlogsynth --list-metrics` or `man pmlogsynth`.
+71 PCP metrics — `pmlogsynth --list-metrics` or `man pmlogsynth`.
 
 ---
 

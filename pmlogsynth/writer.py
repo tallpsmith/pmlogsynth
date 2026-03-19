@@ -12,6 +12,7 @@ from pmlogsynth.domains.base import MetricDescriptor, MetricModel
 from pmlogsynth.domains.cpu import CpuMetricModel
 from pmlogsynth.domains.disk import DiskMetricModel
 from pmlogsynth.domains.memory import MemoryMetricModel
+from pmlogsynth.domains.metadata import MetadataMetricModel
 from pmlogsynth.domains.network import NetworkMetricModel
 from pmlogsynth.domains.system import SystemMetricModel
 from pmlogsynth.profile import HardwareProfile, WorkloadProfile
@@ -53,7 +54,7 @@ class ArchiveWriter:
         self._force = force
         self._leave_partial = leave_partial
 
-        # Instantiate all five domain models
+        # Instantiate all domain models
         mean_pkt = profile.meta.mean_packet_bytes
         self._models: List[MetricModel] = [
             CpuMetricModel(),
@@ -61,6 +62,7 @@ class ArchiveWriter:
             DiskMetricModel(),
             NetworkMetricModel(mean_packet_bytes=mean_pkt),
             SystemMetricModel(),
+            MetadataMetricModel(),
         ]
 
     def write(self, timeline: ExpandedTimeline, sampler: ValueSampler) -> None:

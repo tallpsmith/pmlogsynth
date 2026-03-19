@@ -32,7 +32,7 @@ class MemoryMetricModel(MetricModel):
             # Existing metrics
             MetricDescriptor(
                 name="mem.util.used",
-                pmid=(58, 0, 6),
+                pmid=(60, 1, 1),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -40,7 +40,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.util.free",
-                pmid=(58, 0, 2),
+                pmid=(60, 1, 2),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -48,7 +48,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.util.cached",
-                pmid=(58, 0, 13),
+                pmid=(60, 1, 5),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -56,7 +56,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.util.bufmem",
-                pmid=(58, 0, 4),
+                pmid=(60, 1, 4),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -64,16 +64,16 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.physmem",
-                pmid=(58, 0, 0),
+                pmid=(60, 1, 0),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
                 units=UNITS_KBYTE,
             ),
-            # New instant metrics
+            # New instant metrics — CLUSTER_MEMINFO (domain 60, cluster 1)
             MetricDescriptor(
                 name="mem.util.active",
-                pmid=(58, 0, 15),
+                pmid=(60, 1, 14),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -81,7 +81,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.util.inactive",
-                pmid=(58, 0, 16),
+                pmid=(60, 1, 15),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -89,16 +89,16 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.util.slab",
-                pmid=(58, 0, 12),
+                pmid=(60, 1, 25),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
                 units=UNITS_KBYTE,
             ),
-            # Swap metrics (cluster 1)
+            # Swap metrics — swap.used in CLUSTER_MEMINFO; pages in CLUSTER_STAT
             MetricDescriptor(
                 name="swap.used",
-                pmid=(58, 1, 0),
+                pmid=(60, 1, 7),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_INSTANT,
@@ -106,7 +106,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="swap.pagesin",
-                pmid=(58, 1, 1),
+                pmid=(60, 0, 8),
                 type_code=PM_TYPE_32,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -114,16 +114,16 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="swap.pagesout",
-                pmid=(58, 1, 2),
+                pmid=(60, 0, 9),
                 type_code=PM_TYPE_32,
                 indom=None,
                 sem=PM_SEM_COUNTER,
                 units=UNITS_COUNT,
             ),
-            # Paging metrics (cluster 2)
+            # Paging metrics — CLUSTER_VMSTAT (domain 60, cluster 28)
             MetricDescriptor(
                 name="mem.vmstat.pgpgin",
-                pmid=(58, 2, 0),
+                pmid=(60, 28, 0),
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -131,7 +131,7 @@ class MemoryMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="mem.vmstat.pgpgout",
-                pmid=(58, 2, 1),
+                pmid=(60, 28, 1),
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_COUNTER,

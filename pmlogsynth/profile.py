@@ -603,6 +603,7 @@ def _apply_overrides(base: HardwareProfile, overrides: Dict[str, Any]) -> Hardwa
     name = overrides.get("name", base.name)
     disks = base.disks
     interfaces = base.interfaces
+    os_profile = base.os_profile
     if "disks" in overrides:
         disks = [DiskDevice(name=str(d["name"]), type=d.get("type")) for d in overrides["disks"]]
     if "interfaces" in overrides:
@@ -610,10 +611,22 @@ def _apply_overrides(base: HardwareProfile, overrides: Dict[str, Any]) -> Hardwa
             NetworkInterface(name=str(i["name"]), speed_mbps=i.get("speed_mbps"))
             for i in overrides["interfaces"]
         ]
+    if "os" in overrides:
+        raw_os = overrides["os"]
+        os_profile = OsProfile(
+            sysname=str(raw_os.get("sysname", base.os_profile.sysname)),
+            nodename=str(raw_os["nodename"]) if "nodename" in raw_os else base.os_profile.nodename,
+            release=str(raw_os.get("release", base.os_profile.release)),
+            version=str(raw_os.get("version", base.os_profile.version)),
+            machine=str(raw_os.get("machine", base.os_profile.machine)),
+            distro=str(raw_os.get("distro", base.os_profile.distro)),
+            pagesize=int(raw_os.get("pagesize", base.os_profile.pagesize)),
+        )
     return HardwareProfile(
         name=name,
         cpus=int(cpus),
         memory_kb=int(memory_kb),
         disks=disks,
         interfaces=interfaces,
+        os_profile=os_profile,
     )

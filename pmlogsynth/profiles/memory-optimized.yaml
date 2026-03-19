@@ -1,6 +1,14 @@
 name: memory-optimized
 cpus: 4
 memory_kb: 67108864
+os:
+  sysname: Linux
+  nodename: memory-optimized
+  release: "5.15.0-91-generic"
+  version: "#1 SMP PREEMPT_DYNAMIC"
+  machine: x86_64
+  distro: "Ubuntu 22.04.3 LTS"
+  pagesize: 4096
 disks:
   - name: nvme0n1
     type: nvme

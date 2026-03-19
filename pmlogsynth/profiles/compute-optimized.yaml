@@ -1,6 +1,14 @@
 name: compute-optimized
 cpus: 8
 memory_kb: 16777216
+os:
+  sysname: Linux
+  nodename: compute-optimized
+  release: "5.15.0-91-generic"
+  version: "#1 SMP PREEMPT_DYNAMIC"
+  machine: x86_64
+  distro: "Ubuntu 22.04.3 LTS"
+  pagesize: 4096
 disks:
   - name: nvme0n1
     type: nvme

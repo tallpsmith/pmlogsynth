@@ -1,6 +1,14 @@
 name: storage-optimized
 cpus: 4
 memory_kb: 16777216
+os:
+  sysname: Linux
+  nodename: storage-optimized
+  release: "5.15.0-91-generic"
+  version: "#1 SMP PREEMPT_DYNAMIC"
+  machine: x86_64
+  distro: "Ubuntu 22.04.3 LTS"
+  pagesize: 4096
 disks:
   - name: sda
     type: hdd

@@ -221,6 +221,33 @@ Mixing inline fields with
 without an
 .B overrides:
 key is a validation error.
+.SS os (optional)
+Controls the OS metadata embedded in the archive.
+All fields are optional; defaults match a typical Linux x86_64 host.
+.TP
+.B sysname
+OS name string (default: \fILinux\fR).
+.TP
+.B nodename
+Hostname string.
+Defaults to \fImeta.hostname\fR when absent.
+.TP
+.B release
+Kernel release string (default: \fI5.15.0-91-generic\fR).
+.TP
+.B version
+Kernel version string (default: \fI#1 SMP PREEMPT_DYNAMIC\fR).
+.TP
+.B machine
+Hardware architecture string (default: \fIx86_64\fR).
+.TP
+.B distro
+Distribution name string (default: \fIUbuntu 22.04.3 LTS\fR).
+.TP
+.B pagesize
+System page size in bytes (default: \fI4096\fR).
+.PP
+Override via \fBhost.overrides.os:\fR when using a named hardware profile.
 .SS phases
 An ordered list of named time segments.
 Each phase has:
@@ -340,6 +367,19 @@ in
 .B \-\-list\-profiles
 output.
 .SH SUPPORTED METRICS
+Every generated archive includes OS metadata metrics (\fBkernel.uname.*\fR and
+\fBhinv.*\fR) derived from the hardware profile and the optional \fBos:\fR section.
+.SS OS metadata
+.TP
+.BR kernel.uname.sysname ", " kernel.uname.nodename ", " \
+kernel.uname.release ", " kernel.uname.version ", " \
+kernel.uname.machine ", " kernel.uname.distro
+String metrics populated from the hardware profile's
+\fBos:\fR section (or defaults).
+.TP
+.BR hinv.ndisk ", " hinv.physmem ", " hinv.pagesize ", " hinv.ninterface
+Hardware inventory constants: disk count, total RAM (kibibytes),
+page size (bytes), and NIC count respectively.
 .SS CPU (kernel domain)
 .TP
 .B kernel.all.cpu.idle

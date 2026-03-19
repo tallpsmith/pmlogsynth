@@ -258,6 +258,69 @@ def test_writer_force_overwrites(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
+def test_writer_metadata_metrics_written_once(tmp_path: Path) -> None:
+    """Metadata metrics (kernel.uname.*, hinv.*) are written exactly once as discrete."""
+    hardware = _make_hardware()
+    profile = _make_profile(hardware, tmp_path)
+    sampler = ValueSampler(noise=0.0, seed=42)
+    timeline = TimelineSequencer(profile).expand()
+    output = str(tmp_path / "out")
+
+    mock_log = MagicMock()
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
+        mock_pmi.pmiLogImport.return_value = mock_log
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
+
+        from pmlogsynth.writer import ArchiveWriter
+
+        writer = ArchiveWriter(output_path=output, profile=profile, hardware=hardware)
+        writer.write(timeline=timeline, sampler=sampler)
+
+    metadata_names = {
+        "kernel.uname.sysname", "kernel.uname.nodename", "kernel.uname.release",
+        "kernel.uname.version", "kernel.uname.machine", "kernel.uname.distro",
+        "hinv.ndisk", "hinv.physmem", "hinv.pagesize", "hinv.ninterface",
+    }
+    put_calls = mock_log.pmiPutValue.call_args_list
+    for name in metadata_names:
+        calls = [c for c in put_calls if c.args[0] == name]
+        assert len(calls) == 1, f"{name} emitted {len(calls)} times; expected 1"
+
+
+@pytest.mark.integration
+def test_writer_metadata_string_values(tmp_path: Path) -> None:
+    """String metadata metrics pass string values to pmiPutValue."""
+    hardware = _make_hardware()
+    profile = _make_profile(hardware, tmp_path)
+    sampler = ValueSampler(noise=0.0, seed=42)
+    timeline = TimelineSequencer(profile).expand()
+    output = str(tmp_path / "out")
+
+    mock_log = MagicMock()
+    with patch("pmlogsynth.writer.pmi") as mock_pmi, \
+         patch("pmlogsynth.writer.PM_INDOM_NULL", 0xFFFFFFFF):
+        mock_pmi.pmiLogImport.return_value = mock_log
+        mock_log.pmiID.side_effect = lambda d, c, i: (d, c, i)
+        mock_log.pmiInDom.side_effect = lambda d, s: (d, s)
+        mock_log.pmiUnits.side_effect = lambda *a: a
+
+        from pmlogsynth.writer import ArchiveWriter
+
+        writer = ArchiveWriter(output_path=output, profile=profile, hardware=hardware)
+        writer.write(timeline=timeline, sampler=sampler)
+
+    sysname_calls = [
+        c for c in mock_log.pmiPutValue.call_args_list
+        if c.args[0] == "kernel.uname.sysname"
+    ]
+    assert len(sysname_calls) == 1
+    assert sysname_calls[0].args[2] == "Linux"
+
+
+@pytest.mark.integration
 def test_writer_force_deletes_existing_files_before_writing(tmp_path: Path) -> None:
     """--force must unlink all existing archive files before calling pmiLogImport (FR-054)."""
     hardware = _make_hardware()

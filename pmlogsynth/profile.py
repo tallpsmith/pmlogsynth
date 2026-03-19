@@ -79,12 +79,25 @@ class NetworkInterface:
 
 
 @dataclass
+class OsProfile:
+    """OS identity metadata — embedded in hardware profiles."""
+    sysname: str = "Linux"
+    nodename: Optional[str] = None  # defaults to meta.hostname at resolve time
+    release: str = "5.15.0-91-generic"
+    version: str = "#1 SMP PREEMPT_DYNAMIC"
+    machine: str = "x86_64"
+    distro: str = "Ubuntu 22.04.3 LTS"
+    pagesize: int = 4096
+
+
+@dataclass
 class HardwareProfile:
     name: str
     cpus: int
     memory_kb: int
     disks: List[DiskDevice] = field(default_factory=list)
     interfaces: List[NetworkInterface] = field(default_factory=list)
+    os_profile: OsProfile = field(default_factory=OsProfile)
 
 
 # ---------------------------------------------------------------------------
@@ -557,12 +570,29 @@ def _load_hardware_profile(path: Path) -> HardwareProfile:
     interfaces = []
     for i in raw.get("interfaces", []):
         interfaces.append(NetworkInterface(name=str(i["name"]), speed_mbps=i.get("speed_mbps")))
+    os_profile = OsProfile()
+    raw_os = raw.get("os")
+    if raw_os is not None:
+        if not isinstance(raw_os, dict):
+            raise ValidationError(
+                f"Hardware profile {name}: 'os' must be a mapping"
+            )
+        os_profile = OsProfile(
+            sysname=str(raw_os.get("sysname", os_profile.sysname)),
+            nodename=str(raw_os["nodename"]) if "nodename" in raw_os else None,
+            release=str(raw_os.get("release", os_profile.release)),
+            version=str(raw_os.get("version", os_profile.version)),
+            machine=str(raw_os.get("machine", os_profile.machine)),
+            distro=str(raw_os.get("distro", os_profile.distro)),
+            pagesize=int(raw_os.get("pagesize", os_profile.pagesize)),
+        )
     return HardwareProfile(
         name=name,
         cpus=cpus,
         memory_kb=memory_kb,
         disks=disks,
         interfaces=interfaces,
+        os_profile=os_profile,
     )
 
 
@@ -573,6 +603,7 @@ def _apply_overrides(base: HardwareProfile, overrides: Dict[str, Any]) -> Hardwa
     name = overrides.get("name", base.name)
     disks = base.disks
     interfaces = base.interfaces
+    os_profile = base.os_profile
     if "disks" in overrides:
         disks = [DiskDevice(name=str(d["name"]), type=d.get("type")) for d in overrides["disks"]]
     if "interfaces" in overrides:
@@ -580,10 +611,22 @@ def _apply_overrides(base: HardwareProfile, overrides: Dict[str, Any]) -> Hardwa
             NetworkInterface(name=str(i["name"]), speed_mbps=i.get("speed_mbps"))
             for i in overrides["interfaces"]
         ]
+    if "os" in overrides:
+        raw_os = overrides["os"]
+        os_profile = OsProfile(
+            sysname=str(raw_os.get("sysname", base.os_profile.sysname)),
+            nodename=str(raw_os["nodename"]) if "nodename" in raw_os else base.os_profile.nodename,
+            release=str(raw_os.get("release", base.os_profile.release)),
+            version=str(raw_os.get("version", base.os_profile.version)),
+            machine=str(raw_os.get("machine", base.os_profile.machine)),
+            distro=str(raw_os.get("distro", base.os_profile.distro)),
+            pagesize=int(raw_os.get("pagesize", base.os_profile.pagesize)),
+        )
     return HardwareProfile(
         name=name,
         cpus=int(cpus),
         memory_kb=int(memory_kb),
         disks=disks,
         interfaces=interfaces,
+        os_profile=os_profile,
     )

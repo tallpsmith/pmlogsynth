@@ -20,6 +20,7 @@ PM_TYPE_U64: int = _c.PM_TYPE_U64
 PM_TYPE_U32: int = _c.PM_TYPE_U32
 PM_TYPE_32: int = _c.PM_TYPE_32
 PM_TYPE_DOUBLE: int = _c.PM_TYPE_DOUBLE
+PM_TYPE_STRING: int = _c.PM_TYPE_STRING
 
 # ------------------------------------------------------------------
 # Metric semantics  (PM_SEM_*)

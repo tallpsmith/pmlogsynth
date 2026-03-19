@@ -6,7 +6,7 @@ from typing import Set
 
 import pytest
 
-# Expected 53 metric names (24 original + 29 new from 004-pmrep-view-support)
+# Expected 63 metric names (53 previous + 10 metadata from 007)
 EXPECTED_METRICS: Set[str] = {
     # Existing metrics
     "disk.all.read",
@@ -66,6 +66,17 @@ EXPECTED_METRICS: Set[str] = {
     "disk.dev.write_rawactive",
     "disk.dev.avg_qlen",
     "disk.dev.avactive",
+    # New metadata metrics (007)
+    "hinv.ndisk",
+    "hinv.ninterface",
+    "hinv.pagesize",
+    "hinv.physmem",
+    "kernel.uname.distro",
+    "kernel.uname.machine",
+    "kernel.uname.nodename",
+    "kernel.uname.release",
+    "kernel.uname.sysname",
+    "kernel.uname.version",
 }
 
 
@@ -85,9 +96,9 @@ def _capture_list_metrics() -> list:
 
 @pytest.mark.unit
 def test_list_metrics_contains_53_names() -> None:
-    """--list-metrics output contains exactly 53 metric names."""
+    """--list-metrics output contains exactly 63 metric names."""
     lines = _capture_list_metrics()
-    assert len(lines) == 53, f"Expected 53 metrics, got {len(lines)}: {lines}"
+    assert len(lines) == 63, f"Expected 63 metrics, got {len(lines)}: {lines}"
 
 
 @pytest.mark.unit
@@ -137,6 +148,7 @@ def test_domain_descriptors_match_cli_metric_names() -> None:
     from pmlogsynth.domains.cpu import CpuMetricModel
     from pmlogsynth.domains.disk import DiskMetricModel
     from pmlogsynth.domains.memory import MemoryMetricModel
+    from pmlogsynth.domains.metadata import MetadataMetricModel
     from pmlogsynth.domains.network import NetworkMetricModel
     from pmlogsynth.domains.system import SystemMetricModel
     from pmlogsynth.profile import (
@@ -160,6 +172,7 @@ def test_domain_descriptors_match_cli_metric_names() -> None:
         DiskMetricModel(),
         NetworkMetricModel(),
         SystemMetricModel(),
+        MetadataMetricModel(),
     ]:
         for desc in model.metric_descriptors(hw):
             domain_names.add(desc.name)

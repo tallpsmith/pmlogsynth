@@ -38,7 +38,7 @@ def test_metric_descriptors_count() -> None:
     model = NetworkMetricModel()
     hw = _hw_two_ifaces()
     descriptors = model.metric_descriptors(hw)
-    assert len(descriptors) == 4
+    assert len(descriptors) == 12
 
 
 def test_metric_descriptors_names() -> None:
@@ -49,6 +49,94 @@ def test_metric_descriptors_names() -> None:
     assert "network.interface.out.bytes" in names
     assert "network.interface.in.packets" in names
     assert "network.interface.out.packets" in names
+
+
+# ---------------------------------------------------------------------------
+# T021-1b: Corrected PMIDs match real Linux PMDA
+# ---------------------------------------------------------------------------
+
+
+def test_per_interface_pmids_match_linux_pmda() -> None:
+    """Per-interface PMIDs use CLUSTER_NET_DEV=3 with Linux item numbers."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    # ifInOctets=0, ifInUcastPkts=1, ifOutOctets=8, ifOutUcastPkts=9
+    assert by_name["network.interface.in.bytes"].pmid == (60, 3, 0)
+    assert by_name["network.interface.in.packets"].pmid == (60, 3, 1)
+    assert by_name["network.interface.out.bytes"].pmid == (60, 3, 8)
+    assert by_name["network.interface.out.packets"].pmid == (60, 3, 9)
+
+
+def test_per_interface_error_pmids() -> None:
+    """Error descriptors use ifInErrors=2, ifOutErrors=10."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.interface.in.errors"].pmid == (60, 3, 2)
+    assert by_name["network.interface.out.errors"].pmid == (60, 3, 10)
+
+
+def test_per_interface_error_descriptors_have_indom() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.interface.in.errors"].indom == (60, 2)
+    assert by_name["network.interface.out.errors"].indom == (60, 2)
+
+
+def test_aggregate_pmids_use_cluster_90() -> None:
+    """Aggregate PMIDs use CLUSTER_NET_ALL=90."""
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    assert by_name["network.all.in.bytes"].pmid == (60, 90, 0)
+    assert by_name["network.all.in.packets"].pmid == (60, 90, 1)
+    assert by_name["network.all.in.errors"].pmid == (60, 90, 2)
+    assert by_name["network.all.out.bytes"].pmid == (60, 90, 4)
+    assert by_name["network.all.out.packets"].pmid == (60, 90, 5)
+    assert by_name["network.all.out.errors"].pmid == (60, 90, 6)
+
+
+def test_aggregate_descriptors_have_no_indom() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    by_name = {d.name: d for d in model.metric_descriptors(hw)}
+
+    for name in [
+        "network.all.in.bytes",
+        "network.all.out.bytes",
+        "network.all.in.packets",
+        "network.all.out.packets",
+        "network.all.in.errors",
+        "network.all.out.errors",
+    ]:
+        assert by_name[name].indom is None, f"{name} should have indom=None"
+
+
+def test_descriptor_names_complete() -> None:
+    model = NetworkMetricModel()
+    hw = _hw_two_ifaces()
+    names = {d.name for d in model.metric_descriptors(hw)}
+    expected = {
+        "network.interface.in.bytes",
+        "network.interface.out.bytes",
+        "network.interface.in.packets",
+        "network.interface.out.packets",
+        "network.interface.in.errors",
+        "network.interface.out.errors",
+        "network.all.in.bytes",
+        "network.all.out.bytes",
+        "network.all.in.packets",
+        "network.all.out.packets",
+        "network.all.in.errors",
+        "network.all.out.errors",
+    }
+    assert names == expected
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ _NET_INDOM = (60, 2)
 _DEFAULT_RX_MBPS = 0.0
 _DEFAULT_TX_MBPS = 0.0
 _DEFAULT_MEAN_PACKET_BYTES = 1400
+_DEFAULT_ERROR_RATE = 0.0
 
 
 class NetworkMetricModel(MetricModel):
@@ -133,6 +134,7 @@ class NetworkMetricModel(MetricModel):
 
         rx_mbps = net.rx_mbps if net.rx_mbps is not None else _DEFAULT_RX_MBPS
         tx_mbps = net.tx_mbps if net.tx_mbps is not None else _DEFAULT_TX_MBPS
+        error_rate = net.error_rate if net.error_rate is not None else _DEFAULT_ERROR_RATE
         noise = net.noise
 
         noisy_rx = sampler.apply_noise(rx_mbps, noise)
@@ -146,18 +148,25 @@ class NetworkMetricModel(MetricModel):
         out_packets = (
             out_bytes / self._mean_packet_bytes if self._mean_packet_bytes > 0 else 0.0
         )
+        in_errors = in_packets * error_rate
+        out_errors = out_packets * error_rate
 
+        # Per-interface split — computed first so aggregates can sum from ints
         num_ifaces = len(hardware.interfaces)
         in_b: Dict[Optional[str], Any] = {}
         out_b: Dict[Optional[str], Any] = {}
         in_p: Dict[Optional[str], Any] = {}
         out_p: Dict[Optional[str], Any] = {}
+        in_e: Dict[Optional[str], Any] = {}
+        out_e: Dict[Optional[str], Any] = {}
 
         if num_ifaces > 0:
             per_in_bytes = in_bytes / num_ifaces
             per_out_bytes = out_bytes / num_ifaces
             per_in_pkt = in_packets / num_ifaces
             per_out_pkt = out_packets / num_ifaces
+            per_in_err = in_errors / num_ifaces
+            per_out_err = out_errors / num_ifaces
             for iface in hardware.interfaces:
                 name = iface.name
                 in_b[name] = sampler.accumulate(
@@ -172,10 +181,42 @@ class NetworkMetricModel(MetricModel):
                 out_p[name] = sampler.accumulate(
                     "net.out.pkts.{}".format(name), per_out_pkt
                 )
+                in_e[name] = sampler.accumulate(
+                    "net.in.errs.{}".format(name), per_in_err
+                )
+                out_e[name] = sampler.accumulate(
+                    "net.out.errs.{}".format(name), per_out_err
+                )
+
+        # Aggregates are the exact sum of per-interface int values to avoid
+        # truncation drift between independently-accumulated counters.
+        # When there are no interfaces, accumulate the full float directly.
+        if num_ifaces > 0:
+            agg_in_bytes = sum(in_b.values())
+            agg_out_bytes = sum(out_b.values())
+            agg_in_pkt = sum(in_p.values())
+            agg_out_pkt = sum(out_p.values())
+            agg_in_err = sum(in_e.values())
+            agg_out_err = sum(out_e.values())
+        else:
+            agg_in_bytes = sampler.accumulate("network.all.in.bytes", in_bytes)
+            agg_out_bytes = sampler.accumulate("network.all.out.bytes", out_bytes)
+            agg_in_pkt = sampler.accumulate("network.all.in.packets", in_packets)
+            agg_out_pkt = sampler.accumulate("network.all.out.packets", out_packets)
+            agg_in_err = sampler.accumulate("network.all.in.errors", in_errors)
+            agg_out_err = sampler.accumulate("network.all.out.errors", out_errors)
 
         return {
+            "network.all.in.bytes": {None: agg_in_bytes},
+            "network.all.out.bytes": {None: agg_out_bytes},
+            "network.all.in.packets": {None: agg_in_pkt},
+            "network.all.out.packets": {None: agg_out_pkt},
+            "network.all.in.errors": {None: agg_in_err},
+            "network.all.out.errors": {None: agg_out_err},
             "network.interface.in.bytes": in_b,
             "network.interface.out.bytes": out_b,
             "network.interface.in.packets": in_p,
             "network.interface.out.packets": out_p,
+            "network.interface.in.errors": in_e,
+            "network.interface.out.errors": out_e,
         }

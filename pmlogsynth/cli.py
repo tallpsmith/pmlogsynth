@@ -17,7 +17,7 @@ _ALL_METRIC_NAMES: List[str] = [
     "disk.all.write",
     "disk.all.write_bytes",
     "disk.dev.avactive",
-    "disk.dev.avg_qlen",
+    "disk.dev.aveq",
     "disk.dev.blkread",
     "disk.dev.blkwrite",
     "disk.dev.read",

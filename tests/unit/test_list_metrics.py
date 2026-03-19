@@ -73,7 +73,7 @@ EXPECTED_METRICS: Set[str] = {
     "disk.dev.blkwrite",
     "disk.dev.read_rawactive",
     "disk.dev.write_rawactive",
-    "disk.dev.avg_qlen",
+    "disk.dev.aveq",
     "disk.dev.avactive",
     # New metadata metrics (007)
     "hinv.ndisk",

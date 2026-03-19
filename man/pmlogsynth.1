@@ -428,12 +428,28 @@ Instance names match
 fields in the hardware profile.
 .SS Network (network domain)
 .TP
+.BR network.all.in.bytes ", " network.all.out.bytes
+Aggregate receive/transmit bytes across all interfaces (cumulative counter).
+.TP
+.BR network.all.in.packets ", " network.all.out.packets
+Aggregate receive/transmit packet counts across all interfaces (cumulative counter).
+.TP
+.BR network.all.in.errors ", " network.all.out.errors
+Aggregate receive/transmit error counts across all interfaces (cumulative counter).
+Driven by optional
+.B error_rate
+stressor field; defaults to zero.
+.TP
 .BR network.interface.in.bytes ", " network.interface.out.bytes
 Per-interface receive/transmit bytes (cumulative counter).
 .TP
 .BR network.interface.in.packets ", " network.interface.out.packets
 Per-interface receive/transmit packet counts (cumulative counter).
-Instance names match
+.TP
+.BR network.interface.in.errors ", " network.interface.out.errors
+Per-interface receive/transmit error counts (cumulative counter).
+.PP
+All per-interface instance names match
 .I interface.name
 fields in the hardware profile.
 .SH EXAMPLES

@@ -135,6 +135,7 @@ class NetworkStressor:
     rx_mbps: Optional[float] = None
     tx_mbps: Optional[float] = None
     noise: Optional[float] = None
+    error_rate: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -371,10 +372,18 @@ def _parse_network_stressor(raw: Any) -> NetworkStressor:
         noise = float(noise)
         if not (0.0 <= noise <= 1.0):
             raise ValidationError(f"network.noise must be in [0.0, 1.0], got {noise}")
+    error_rate = raw.get("error_rate")
+    if error_rate is not None:
+        error_rate = float(error_rate)
+        if not (0.0 <= error_rate <= 1.0):
+            raise ValidationError(
+                f"network.error_rate must be in [0.0, 1.0], got {error_rate}"
+            )
     return NetworkStressor(
         rx_mbps=float(raw["rx_mbps"]) if "rx_mbps" in raw else None,
         tx_mbps=float(raw["tx_mbps"]) if "tx_mbps" in raw else None,
         noise=noise,
+        error_rate=error_rate,
     )
 
 

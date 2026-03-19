@@ -139,3 +139,25 @@ def test_compute_returns_all_10_metrics() -> None:
     model = MetadataMetricModel()
     values = model.compute(None, _make_hw(), 60, _make_sampler())
     assert len(values) == 10
+
+
+def test_uname_pmids_match_linux_cluster_12() -> None:
+    """kernel.uname.* must use domain 60, cluster 12, with correct item numbers."""
+    model = MetadataMetricModel()
+    descs = {d.name: d for d in model.metric_descriptors(_make_hw())}
+    assert descs["kernel.uname.sysname"].pmid == (60, 12, 2)
+    assert descs["kernel.uname.nodename"].pmid == (60, 12, 4)
+    assert descs["kernel.uname.release"].pmid == (60, 12, 0)
+    assert descs["kernel.uname.version"].pmid == (60, 12, 1)
+    assert descs["kernel.uname.machine"].pmid == (60, 12, 3)
+    assert descs["kernel.uname.distro"].pmid == (60, 12, 7)
+
+
+def test_hinv_pmids_match_linux_pmda() -> None:
+    """hinv.* PMIDs: physmem/pagesize in CLUSTER_MEMINFO=1, ninterface in CLUSTER_NET_DEV=3."""
+    model = MetadataMetricModel()
+    descs = {d.name: d for d in model.metric_descriptors(_make_hw())}
+    assert descs["hinv.ndisk"].pmid == (60, 0, 33)   # already correct, must not regress
+    assert descs["hinv.physmem"].pmid == (60, 1, 9)
+    assert descs["hinv.pagesize"].pmid == (60, 1, 11)
+    assert descs["hinv.ninterface"].pmid == (60, 3, 27)

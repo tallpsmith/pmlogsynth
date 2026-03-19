@@ -81,7 +81,7 @@ def test_descriptors_include_pswitch(hw4: HardwareProfile) -> None:
     model = SystemMetricModel()
     desc = {d.name: d for d in model.metric_descriptors(hw4)}
     assert "kernel.all.pswitch" in desc
-    assert desc["kernel.all.pswitch"].pmid == (60, 0, 7)
+    assert desc["kernel.all.pswitch"].pmid == (60, 0, 13)
     assert desc["kernel.all.pswitch"].type_code == PM_TYPE_U32
     assert desc["kernel.all.pswitch"].sem == PM_SEM_COUNTER
 

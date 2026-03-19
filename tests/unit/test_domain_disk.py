@@ -58,7 +58,7 @@ class TestMetricDescriptors:
             "disk.dev.blkwrite",
             "disk.dev.read_rawactive",
             "disk.dev.write_rawactive",
-            "disk.dev.avg_qlen",
+            "disk.dev.aveq",
             "disk.dev.avactive",
         ):
             assert expected in names, "Missing descriptor: {}".format(expected)
@@ -71,7 +71,7 @@ class TestMetricDescriptors:
                 "disk.dev.read", "disk.dev.write", "disk.dev.read_merge",
                 "disk.dev.write_merge", "disk.dev.blkread", "disk.dev.blkwrite",
                 "disk.dev.read_rawactive", "disk.dev.write_rawactive",
-                "disk.dev.avg_qlen", "disk.dev.avactive",
+                "disk.dev.aveq", "disk.dev.avactive",
             ):
                 assert d.indom == (60, 1), f"{d.name}: expected indom (60,1)"
 
@@ -87,27 +87,27 @@ class TestMetricDescriptors:
             assert desc[name].sem == PM_SEM_COUNTER, f"{name}: expected PM_SEM_COUNTER"
             assert desc[name].type_code == PM_TYPE_U64, f"{name}: expected PM_TYPE_U64"
 
-    def test_avg_qlen_is_double_instant(self) -> None:
+    def test_aveq_is_double_instant(self) -> None:
         model = DiskMetricModel()
         hw = _make_hw()
         desc = {d.name: d for d in model.metric_descriptors(hw)}
-        assert desc["disk.dev.avg_qlen"].sem == PM_SEM_INSTANT
-        assert desc["disk.dev.avg_qlen"].type_code == PM_TYPE_DOUBLE
+        assert desc["disk.dev.aveq"].sem == PM_SEM_INSTANT
+        assert desc["disk.dev.aveq"].type_code == PM_TYPE_DOUBLE
 
     def test_new_pmids(self) -> None:
         model = DiskMetricModel()
         hw = _make_hw()
         desc = {d.name: d for d in model.metric_descriptors(hw)}
-        assert desc["disk.dev.read"].pmid == (60, 5, 0)
-        assert desc["disk.dev.write"].pmid == (60, 5, 1)
-        assert desc["disk.dev.read_merge"].pmid == (60, 5, 2)
-        assert desc["disk.dev.write_merge"].pmid == (60, 5, 3)
-        assert desc["disk.dev.blkread"].pmid == (60, 5, 7)
-        assert desc["disk.dev.blkwrite"].pmid == (60, 5, 8)
-        assert desc["disk.dev.read_rawactive"].pmid == (60, 5, 9)
-        assert desc["disk.dev.write_rawactive"].pmid == (60, 5, 10)
-        assert desc["disk.dev.avg_qlen"].pmid == (60, 5, 11)
-        assert desc["disk.dev.avactive"].pmid == (60, 5, 12)
+        assert desc["disk.dev.read"].pmid == (60, 0, 4)
+        assert desc["disk.dev.write"].pmid == (60, 0, 5)
+        assert desc["disk.dev.read_merge"].pmid == (60, 0, 49)
+        assert desc["disk.dev.write_merge"].pmid == (60, 0, 50)
+        assert desc["disk.dev.blkread"].pmid == (60, 0, 6)
+        assert desc["disk.dev.blkwrite"].pmid == (60, 0, 7)
+        assert desc["disk.dev.read_rawactive"].pmid == (60, 0, 72)
+        assert desc["disk.dev.write_rawactive"].pmid == (60, 0, 73)
+        assert desc["disk.dev.aveq"].pmid == (60, 0, 47)
+        assert desc["disk.dev.avactive"].pmid == (60, 0, 46)
 
     def test_aggregate_metrics_have_no_indom(self) -> None:
         model = DiskMetricModel()
@@ -127,12 +127,12 @@ class TestMetricDescriptors:
         model = DiskMetricModel()
         hw = _make_hw()
         by_name = {d.name: d for d in model.metric_descriptors(hw)}
-        assert by_name["disk.all.read"].pmid == (60, 4, 0)
-        assert by_name["disk.all.write"].pmid == (60, 4, 1)
-        assert by_name["disk.all.read_bytes"].pmid == (60, 4, 5)
-        assert by_name["disk.all.write_bytes"].pmid == (60, 4, 6)
-        assert by_name["disk.dev.read_bytes"].pmid == (60, 5, 5)
-        assert by_name["disk.dev.write_bytes"].pmid == (60, 5, 6)
+        assert by_name["disk.all.read"].pmid == (60, 0, 24)
+        assert by_name["disk.all.write"].pmid == (60, 0, 25)
+        assert by_name["disk.all.read_bytes"].pmid == (60, 0, 41)
+        assert by_name["disk.all.write_bytes"].pmid == (60, 0, 42)
+        assert by_name["disk.dev.read_bytes"].pmid == (60, 0, 38)
+        assert by_name["disk.dev.write_bytes"].pmid == (60, 0, 39)
 
 
 class TestPerDeviceInstances:
@@ -387,7 +387,7 @@ class TestNewDiskMetrics:
             "disk.dev.read_merge", "disk.dev.write_merge",
             "disk.dev.blkread", "disk.dev.blkwrite",
             "disk.dev.read_rawactive", "disk.dev.write_rawactive",
-            "disk.dev.avg_qlen", "disk.dev.avactive",
+            "disk.dev.aveq", "disk.dev.avactive",
         ):
             assert name in result, "Missing metric: {}".format(name)
 
@@ -423,15 +423,15 @@ class TestNewDiskMetrics:
         expected = int(1.0 * 1024 * 1024 * 60 / 512)
         assert result["disk.dev.blkread"]["sda"] == expected
 
-    def test_avg_qlen_is_float(self) -> None:
-        """disk.dev.avg_qlen must be a float value."""
+    def test_aveq_is_float(self) -> None:
+        """disk.dev.aveq must be a float value."""
         model = DiskMetricModel()
         hw = _make_hw()
         sampler = _make_sampler()
         stressor = DiskStressor(read_mbps=100.0, write_mbps=50.0)
         result = model.compute(stressor, hw, interval=60, sampler=sampler)
-        for val in result["disk.dev.avg_qlen"].values():
-            assert isinstance(val, float), "avg_qlen should be float, got {}".format(type(val))
+        for val in result["disk.dev.aveq"].values():
+            assert isinstance(val, float), "aveq should be float, got {}".format(type(val))
 
     def test_new_counters_accumulate_monotonically(self) -> None:
         """New counter metrics (read, write, blkread) increase across ticks."""
@@ -475,7 +475,7 @@ class TestNewDiskMetrics:
         for name in (
             "disk.dev.read", "disk.dev.write",
             "disk.dev.blkread", "disk.dev.blkwrite",
-            "disk.dev.avg_qlen", "disk.dev.avactive",
+            "disk.dev.aveq", "disk.dev.avactive",
         ):
             for val in result[name].values():
                 assert val == 0 or val == 0.0, "{} should be 0 with zero I/O, got {}".format(

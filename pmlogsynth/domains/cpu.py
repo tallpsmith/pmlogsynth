@@ -58,7 +58,7 @@ class CpuMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.idle",
-                pmid=(60, 0, 21),
+                pmid=(60, 0, 23),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -74,7 +74,7 @@ class CpuMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.all.cpu.steal",
-                pmid=(60, 0, 58),
+                pmid=(60, 0, 55),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -83,7 +83,7 @@ class CpuMetricModel(MetricModel):
             # Sub-metric carves from user bucket
             MetricDescriptor(
                 name="kernel.all.cpu.nice",
-                pmid=(60, 0, 27),
+                pmid=(60, 0, 21),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -143,7 +143,7 @@ class CpuMetricModel(MetricModel):
             # Per-CPU metrics
             MetricDescriptor(
                 name="kernel.percpu.cpu.user",
-                pmid=(60, 10, 20),
+                pmid=(60, 0, 0),
                 type_code=PM_TYPE_U64,
                 indom=cpu_indom,
                 sem=PM_SEM_COUNTER,
@@ -151,7 +151,7 @@ class CpuMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.percpu.cpu.sys",
-                pmid=(60, 10, 22),
+                pmid=(60, 0, 2),
                 type_code=PM_TYPE_U64,
                 indom=cpu_indom,
                 sem=PM_SEM_COUNTER,
@@ -159,7 +159,7 @@ class CpuMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.percpu.cpu.idle",
-                pmid=(60, 10, 21),
+                pmid=(60, 0, 3),
                 type_code=PM_TYPE_U64,
                 indom=cpu_indom,
                 sem=PM_SEM_COUNTER,

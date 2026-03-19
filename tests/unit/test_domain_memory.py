@@ -214,11 +214,11 @@ def test_metric_descriptors_pmids():
     model = make_model()
     descriptors = model.metric_descriptors(hw)
     pmid_map = {d.name: d.pmid for d in descriptors}
-    assert pmid_map["mem.util.used"] == (58, 0, 6)
-    assert pmid_map["mem.util.free"] == (58, 0, 2)
-    assert pmid_map["mem.util.cached"] == (58, 0, 13)
-    assert pmid_map["mem.util.bufmem"] == (58, 0, 4)
-    assert pmid_map["mem.physmem"] == (58, 0, 0)
+    assert pmid_map["mem.util.used"] == (60, 1, 1)
+    assert pmid_map["mem.util.free"] == (60, 1, 2)
+    assert pmid_map["mem.util.cached"] == (60, 1, 5)
+    assert pmid_map["mem.util.bufmem"] == (60, 1, 4)
+    assert pmid_map["mem.physmem"] == (60, 1, 0)
 
 
 def test_metric_descriptors_semantics():
@@ -250,14 +250,14 @@ def test_new_memory_metric_pmids():
     hw = make_hw()
     model = make_model()
     desc = {d.name: d for d in model.metric_descriptors(hw)}
-    assert desc["mem.util.active"].pmid == (58, 0, 15)
-    assert desc["mem.util.inactive"].pmid == (58, 0, 16)
-    assert desc["mem.util.slab"].pmid == (58, 0, 12)
-    assert desc["swap.used"].pmid == (58, 1, 0)
-    assert desc["swap.pagesin"].pmid == (58, 1, 1)
-    assert desc["swap.pagesout"].pmid == (58, 1, 2)
-    assert desc["mem.vmstat.pgpgin"].pmid == (58, 2, 0)
-    assert desc["mem.vmstat.pgpgout"].pmid == (58, 2, 1)
+    assert desc["mem.util.active"].pmid == (60, 1, 14)
+    assert desc["mem.util.inactive"].pmid == (60, 1, 15)
+    assert desc["mem.util.slab"].pmid == (60, 1, 25)
+    assert desc["swap.used"].pmid == (60, 1, 7)
+    assert desc["swap.pagesin"].pmid == (60, 0, 8)
+    assert desc["swap.pagesout"].pmid == (60, 0, 9)
+    assert desc["mem.vmstat.pgpgin"].pmid == (60, 28, 0)
+    assert desc["mem.vmstat.pgpgout"].pmid == (60, 28, 1)
 
 
 def test_instant_new_metrics_semantics():

@@ -22,18 +22,16 @@ from pmlogsynth.sampler import ValueSampler
 # Units: megabytes — (dimSpace=1, dimTime=0, dimCount=0, scaleSpace=PM_SPACE_MBYTE, 0, 0)
 _UNITS_MBYTE = (1, 0, 0, 2, 0, 0)
 
-# PMID cluster 9 — kernel.uname.* in the linux PMDA uses cluster 9
-_UNAME_CLUSTER = 9
-
 
 class MetadataMetricModel(MetricModel):
     """Generates kernel.uname.* and hinv.* discrete metadata metrics."""
 
     def metric_descriptors(self, hardware: HardwareProfile) -> List[MetricDescriptor]:
         return [
+            # kernel.uname.* — domain 60, CLUSTER_KERNEL_UNAME=12, items per linux PMDA
             MetricDescriptor(
                 name="kernel.uname.sysname",
-                pmid=(60, _UNAME_CLUSTER, 0),
+                pmid=(60, 12, 2),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -42,7 +40,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.uname.nodename",
-                pmid=(60, _UNAME_CLUSTER, 1),
+                pmid=(60, 12, 4),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -51,7 +49,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.uname.release",
-                pmid=(60, _UNAME_CLUSTER, 2),
+                pmid=(60, 12, 0),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -60,7 +58,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.uname.version",
-                pmid=(60, _UNAME_CLUSTER, 3),
+                pmid=(60, 12, 1),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -69,7 +67,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.uname.machine",
-                pmid=(60, _UNAME_CLUSTER, 4),
+                pmid=(60, 12, 3),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -78,16 +76,17 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.uname.distro",
-                pmid=(60, _UNAME_CLUSTER, 5),
+                pmid=(60, 12, 7),
                 type_code=PM_TYPE_STRING,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
                 units=UNITS_NONE,
                 is_discrete=True,
             ),
+            # hinv.* — domain 60; clusters per linux PMDA
             MetricDescriptor(
                 name="hinv.ndisk",
-                pmid=(60, 0, 33),
+                pmid=(60, 0, 33),          # CLUSTER_STAT=0 — already correct
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -96,7 +95,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="hinv.physmem",
-                pmid=(60, 0, 36),
+                pmid=(60, 1, 9),           # CLUSTER_MEMINFO=1
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -105,7 +104,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="hinv.pagesize",
-                pmid=(60, 0, 37),
+                pmid=(60, 1, 11),          # CLUSTER_MEMINFO=1
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_DISCRETE,
@@ -114,7 +113,7 @@ class MetadataMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="hinv.ninterface",
-                pmid=(60, 0, 38),
+                pmid=(60, 3, 27),          # CLUSTER_NET_DEV=3
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_DISCRETE,

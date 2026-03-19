@@ -52,7 +52,7 @@ class SystemMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="kernel.all.pswitch",
-                pmid=(60, 0, 7),
+                pmid=(60, 0, 13),
                 type_code=PM_TYPE_U32,
                 indom=None,
                 sem=PM_SEM_COUNTER,

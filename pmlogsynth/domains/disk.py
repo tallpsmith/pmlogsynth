@@ -36,7 +36,7 @@ class DiskMetricModel(MetricModel):
             # Aggregate metrics (disk.all.*)
             MetricDescriptor(
                 name="disk.all.read",
-                pmid=(60, 4, 0),
+                pmid=(60, 0, 24),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -44,7 +44,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.all.write",
-                pmid=(60, 4, 1),
+                pmid=(60, 0, 25),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -52,7 +52,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.all.read_bytes",
-                pmid=(60, 4, 5),
+                pmid=(60, 0, 41),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -60,7 +60,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.all.write_bytes",
-                pmid=(60, 4, 6),
+                pmid=(60, 0, 42),
                 type_code=PM_TYPE_U64,
                 indom=None,
                 sem=PM_SEM_COUNTER,
@@ -69,7 +69,7 @@ class DiskMetricModel(MetricModel):
             # Existing per-device metrics
             MetricDescriptor(
                 name="disk.dev.read_bytes",
-                pmid=(60, 5, 5),
+                pmid=(60, 0, 38),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -77,7 +77,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.write_bytes",
-                pmid=(60, 5, 6),
+                pmid=(60, 0, 39),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -86,7 +86,7 @@ class DiskMetricModel(MetricModel):
             # New per-device IOPS counters
             MetricDescriptor(
                 name="disk.dev.read",
-                pmid=(60, 5, 0),
+                pmid=(60, 0, 4),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -94,7 +94,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.write",
-                pmid=(60, 5, 1),
+                pmid=(60, 0, 5),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -102,7 +102,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.read_merge",
-                pmid=(60, 5, 2),
+                pmid=(60, 0, 49),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -110,7 +110,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.write_merge",
-                pmid=(60, 5, 3),
+                pmid=(60, 0, 50),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -119,7 +119,7 @@ class DiskMetricModel(MetricModel):
             # New sector counters
             MetricDescriptor(
                 name="disk.dev.blkread",
-                pmid=(60, 5, 7),
+                pmid=(60, 0, 6),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -127,7 +127,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.blkwrite",
-                pmid=(60, 5, 8),
+                pmid=(60, 0, 7),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -136,7 +136,7 @@ class DiskMetricModel(MetricModel):
             # I/O time counters (milliseconds)
             MetricDescriptor(
                 name="disk.dev.read_rawactive",
-                pmid=(60, 5, 9),
+                pmid=(60, 0, 72),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -144,7 +144,7 @@ class DiskMetricModel(MetricModel):
             ),
             MetricDescriptor(
                 name="disk.dev.write_rawactive",
-                pmid=(60, 5, 10),
+                pmid=(60, 0, 73),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -152,8 +152,8 @@ class DiskMetricModel(MetricModel):
             ),
             # Queue length instant (double)
             MetricDescriptor(
-                name="disk.dev.avg_qlen",
-                pmid=(60, 5, 11),
+                name="disk.dev.aveq",
+                pmid=(60, 0, 47),
                 type_code=PM_TYPE_DOUBLE,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_INSTANT,
@@ -162,7 +162,7 @@ class DiskMetricModel(MetricModel):
             # Active time counter
             MetricDescriptor(
                 name="disk.dev.avactive",
-                pmid=(60, 5, 12),
+                pmid=(60, 0, 46),
                 type_code=PM_TYPE_U64,
                 indom=_DISK_INDOM,
                 sem=PM_SEM_COUNTER,
@@ -226,7 +226,7 @@ class DiskMetricModel(MetricModel):
         dev_blkwrite: Dict[Optional[str], Any] = {}
         dev_read_rawactive: Dict[Optional[str], Any] = {}
         dev_write_rawactive: Dict[Optional[str], Any] = {}
-        dev_avg_qlen: Dict[Optional[str], Any] = {}
+        dev_aveq: Dict[Optional[str], Any] = {}
         dev_avactive: Dict[Optional[str], Any] = {}
 
         if num_disks > 0:
@@ -246,7 +246,7 @@ class DiskMetricModel(MetricModel):
             per_dev_write_raw_ms = (per_dev_write_bytes * 0.8 / (1024 * 1024)) * 1000
 
             # Queue length: proportional to combined throughput
-            avg_qlen_val = (read_mbps + write_mbps) / 100.0 / num_disks
+            aveq_val = (read_mbps + write_mbps) / 100.0 / num_disks
 
             for dev in hardware.disks:
                 n = dev.name
@@ -280,7 +280,7 @@ class DiskMetricModel(MetricModel):
                 dev_write_rawactive[n] = sampler.accumulate(
                     "disk.dev.write_rawactive." + n, per_dev_write_raw_ms
                 )
-                dev_avg_qlen[n] = avg_qlen_val
+                dev_aveq[n] = aveq_val
                 raw_active_ms = per_dev_read_raw_ms + per_dev_write_raw_ms
                 dev_avactive[n] = sampler.accumulate(
                     "disk.dev.avactive." + n, raw_active_ms
@@ -296,7 +296,7 @@ class DiskMetricModel(MetricModel):
         result["disk.dev.blkwrite"] = dev_blkwrite
         result["disk.dev.read_rawactive"] = dev_read_rawactive
         result["disk.dev.write_rawactive"] = dev_write_rawactive
-        result["disk.dev.avg_qlen"] = dev_avg_qlen
+        result["disk.dev.aveq"] = dev_aveq
         result["disk.dev.avactive"] = dev_avactive
 
         return result

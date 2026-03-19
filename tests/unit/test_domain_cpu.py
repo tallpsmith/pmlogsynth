@@ -98,12 +98,12 @@ def test_descriptor_pmids() -> None:
 
     assert descriptors["kernel.all.cpu.user"].pmid == (60, 0, 20)
     assert descriptors["kernel.all.cpu.sys"].pmid == (60, 0, 22)
-    assert descriptors["kernel.all.cpu.idle"].pmid == (60, 0, 21)
+    assert descriptors["kernel.all.cpu.idle"].pmid == (60, 0, 23)
     assert descriptors["kernel.all.cpu.wait.total"].pmid == (60, 0, 35)
-    assert descriptors["kernel.all.cpu.steal"].pmid == (60, 0, 58)
-    assert descriptors["kernel.percpu.cpu.user"].pmid == (60, 10, 20)
-    assert descriptors["kernel.percpu.cpu.sys"].pmid == (60, 10, 22)
-    assert descriptors["kernel.percpu.cpu.idle"].pmid == (60, 10, 21)
+    assert descriptors["kernel.all.cpu.steal"].pmid == (60, 0, 55)
+    assert descriptors["kernel.percpu.cpu.user"].pmid == (60, 0, 0)
+    assert descriptors["kernel.percpu.cpu.sys"].pmid == (60, 0, 2)
+    assert descriptors["kernel.percpu.cpu.idle"].pmid == (60, 0, 3)
 
 
 def test_descriptor_type_and_sem() -> None:
@@ -519,7 +519,7 @@ def test_new_sub_metric_pmids() -> None:
     model = CpuMetricModel()
     hw = make_hw(cpus=4)
     desc = {d.name: d for d in model.metric_descriptors(hw)}
-    assert desc["kernel.all.cpu.nice"].pmid == (60, 0, 27)
+    assert desc["kernel.all.cpu.nice"].pmid == (60, 0, 21)
     assert desc["kernel.all.cpu.vuser"].pmid == (60, 0, 78)
     assert desc["kernel.all.cpu.vnice"].pmid == (60, 0, 82)
     assert desc["kernel.all.cpu.intr"].pmid == (60, 0, 34)

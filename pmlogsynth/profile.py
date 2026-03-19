@@ -570,12 +570,29 @@ def _load_hardware_profile(path: Path) -> HardwareProfile:
     interfaces = []
     for i in raw.get("interfaces", []):
         interfaces.append(NetworkInterface(name=str(i["name"]), speed_mbps=i.get("speed_mbps")))
+    os_profile = OsProfile()
+    raw_os = raw.get("os")
+    if raw_os is not None:
+        if not isinstance(raw_os, dict):
+            raise ValidationError(
+                f"Hardware profile {name}: 'os' must be a mapping"
+            )
+        os_profile = OsProfile(
+            sysname=str(raw_os.get("sysname", os_profile.sysname)),
+            nodename=str(raw_os["nodename"]) if "nodename" in raw_os else None,
+            release=str(raw_os.get("release", os_profile.release)),
+            version=str(raw_os.get("version", os_profile.version)),
+            machine=str(raw_os.get("machine", os_profile.machine)),
+            distro=str(raw_os.get("distro", os_profile.distro)),
+            pagesize=int(raw_os.get("pagesize", os_profile.pagesize)),
+        )
     return HardwareProfile(
         name=name,
         cpus=cpus,
         memory_kb=memory_kb,
         disks=disks,
         interfaces=interfaces,
+        os_profile=os_profile,
     )
 
 

@@ -1,14 +1,18 @@
 """Fleet profile loading, validation, and host assignment."""
 
 import hashlib
+import logging
 import random
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 
 from pmlogsynth.profile import ValidationError, parse_duration
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -59,6 +63,7 @@ class HostAssignment:
     role: str  # "baseline" or "bad_actor"
     jitter_factor: float
     workload_path: Path
+    workload_rel: str = ""
 
 
 def _parse_fleet_meta(raw: Dict[str, Any]) -> FleetMeta:
@@ -228,10 +233,12 @@ def assign_hosts(
             # Pick a profile from the bad-actor pool
             profile_idx = rng.randrange(len(fleet.bad_actors.profiles))
             workload_path = fleet.bad_actors.profile_paths[profile_idx]
+            workload_rel = fleet.bad_actors.profiles[profile_idx]
         else:
             role = "baseline"
             jitter_stddev = fleet.hosts.jitter
             workload_path = fleet.hosts.baseline_path
+            workload_rel = fleet.hosts.baseline
 
         # Generate a stable, deterministic jitter factor per host
         host_seed = _stable_host_seed(fleet.meta.name, hostname, seed)
@@ -244,7 +251,101 @@ def assign_hosts(
                 role=role,
                 jitter_factor=jitter_factor,
                 workload_path=workload_path,
+                workload_rel=workload_rel,
             )
         )
 
     return assignments
+
+
+def write_manifest(
+    path: Path,
+    fleet: FleetProfile,
+    assignments: List[HostAssignment],
+    seed: Optional[int],
+) -> None:
+    """Write fleet.manifest YAML file recording all host assignments."""
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    manifest = {
+        "meta": {
+            "name": fleet.meta.name,
+            "generated": now,
+            "pmlogsynth_version": "1.0",
+            "seed": seed,
+            "duration": fleet.meta.duration,
+            "interval": fleet.meta.interval,
+            "hardware": fleet.meta.hardware,
+            "host_count": len(assignments),
+        },
+        "archives": [
+            {
+                "hostname": a.hostname,
+                "profile": a.workload_rel,
+                "role": a.role,
+                "jitter_factor": round(a.jitter_factor, 6),
+            }
+            for a in assignments
+        ],
+    }
+
+    path.write_text(
+        yaml.dump(manifest, default_flow_style=False, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
+def check_override_warnings(fleet: FleetProfile) -> None:
+    """Emit warnings for workload profile values that fleet settings override."""
+    seen = {}  # type: Dict[Path, bool]
+
+    all_paths = [fleet.hosts.baseline_path]
+    all_rels = [fleet.hosts.baseline]
+    for idx in range(len(fleet.bad_actors.profiles)):
+        all_paths.append(fleet.bad_actors.profile_paths[idx])
+        all_rels.append(fleet.bad_actors.profiles[idx])
+
+    for wpath, wrel in zip(all_paths, all_rels):
+        if wpath in seen:
+            continue
+        seen[wpath] = True
+
+        try:
+            raw = yaml.safe_load(wpath.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError):
+            continue
+
+        if not isinstance(raw, dict):
+            continue
+
+        meta = raw.get("meta", {})
+        if not isinstance(meta, dict):
+            continue
+
+        if "duration" in meta:
+            profile_duration = parse_duration(meta["duration"])
+            if profile_duration != fleet.meta.duration:
+                logger.warning(
+                    "workload profile '%s' defines duration=%s "
+                    "— overridden by fleet setting duration=%s",
+                    wrel, profile_duration, fleet.meta.duration,
+                )
+
+        if "interval" in meta:
+            profile_interval = parse_duration(meta["interval"])
+            if profile_interval != fleet.meta.interval:
+                logger.warning(
+                    "workload profile '%s' defines interval=%s "
+                    "— overridden by fleet setting interval=%s",
+                    wrel, profile_interval, fleet.meta.interval,
+                )
+
+        host = raw.get("host", {})
+        if isinstance(host, dict) and "profile" in host:
+            profile_hw = str(host["profile"])
+            if profile_hw != fleet.meta.hardware:
+                logger.warning(
+                    "workload profile '%s' defines hardware=%s "
+                    "— overridden by fleet setting hardware=%s",
+                    wrel, profile_hw, fleet.meta.hardware,
+                )

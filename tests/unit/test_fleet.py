@@ -212,3 +212,89 @@ class TestAssignHosts:
         bad = [a for a in assignments if a.role == "bad_actor"]
         for b in bad:
             assert b.workload_path.name in ("bad-cpu.yaml",)
+
+
+class TestWriteManifest:
+    """Tests for fleet.manifest YAML output."""
+
+    def test_manifest_contains_all_hosts(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import (
+            assign_hosts,
+            load_fleet_profile,
+            write_manifest,
+        )
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assignments = assign_hosts(fleet, seed=42)
+        manifest_path = tmp_path / "fleet.manifest"
+        write_manifest(manifest_path, fleet, assignments, seed=42)
+
+        import yaml as _yaml
+
+        manifest = _yaml.safe_load(manifest_path.read_text())
+        assert manifest["meta"]["name"] == "test-fleet"
+        assert manifest["meta"]["host_count"] == 5
+        assert manifest["meta"]["seed"] == 42
+        assert len(manifest["archives"]) == 5
+
+    def test_manifest_roles_match_assignments(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import (
+            assign_hosts,
+            load_fleet_profile,
+            write_manifest,
+        )
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assignments = assign_hosts(fleet, seed=42)
+        write_manifest(tmp_path / "fleet.manifest", fleet, assignments, seed=42)
+
+        import yaml as _yaml
+
+        manifest = _yaml.safe_load((tmp_path / "fleet.manifest").read_text())
+        for entry, assignment in zip(manifest["archives"], assignments):
+            assert entry["hostname"] == assignment.hostname
+            assert entry["role"] == assignment.role
+            assert entry["jitter_factor"] == pytest.approx(assignment.jitter_factor)
+
+    def test_manifest_records_none_seed(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import (
+            assign_hosts,
+            load_fleet_profile,
+            write_manifest,
+        )
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assignments = assign_hosts(fleet, seed=None)
+        write_manifest(tmp_path / "fleet.manifest", fleet, assignments, seed=None)
+
+        import yaml as _yaml
+
+        manifest = _yaml.safe_load((tmp_path / "fleet.manifest").read_text())
+        assert manifest["meta"]["seed"] is None
+
+
+class TestOverrideWarnings:
+    """Tests for warnings when fleet settings override workload profile values."""
+
+    def test_warns_on_duration_conflict(self, caplog: pytest.LogCaptureFixture) -> None:
+        import logging
+
+        from pmlogsynth.fleet import check_override_warnings, load_fleet_profile
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        from dataclasses import replace
+
+        fleet_different = replace(fleet, meta=replace(fleet.meta, duration=3600))
+        with caplog.at_level(logging.WARNING):
+            check_override_warnings(fleet_different)
+        assert any("duration" in r.message for r in caplog.records)
+
+    def test_no_warning_when_values_match(self, caplog: pytest.LogCaptureFixture) -> None:
+        import logging
+
+        from pmlogsynth.fleet import check_override_warnings, load_fleet_profile
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        with caplog.at_level(logging.WARNING):
+            check_override_warnings(fleet)
+        assert not any("duration" in r.message for r in caplog.records)

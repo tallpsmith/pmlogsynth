@@ -119,7 +119,8 @@ pmlogsynth --show-schema     # dump the full profile schema (for AI agents)
 ### 6. Generate profiles with AI
 
 If you're using [Claude Code](https://claude.ai/claude-code) with this repo checked out,
-two built-in skills can generate valid YAML profiles from plain-English descriptions:
+two built-in skills can generate YAML profiles from plain-English descriptions,
+validate them, and generate the actual PCP archives — all in one step:
 
 **Single-host workload profiles** — just describe the scenario:
 
@@ -138,9 +139,9 @@ two built-in skills can generate valid YAML profiles from plain-English descript
 > create a small 5-host dev cluster with normal web traffic for an hour
 ```
 
-The skills bundle the full schema as context, validate the output against
-`pmlogsynth --validate` (or `pmlogsynth fleet --validate`), and save the
-generated files to `generated-archives/`.
+The skills bundle the full schema as context, validate the output, and run
+`pmlogsynth` to generate the PCP archives — ready to inspect with `pmstat`,
+`pmval`, or `pmrep`. All output goes to `generated-archives/`.
 
 ---
 

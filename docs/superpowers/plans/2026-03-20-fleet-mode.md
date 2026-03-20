@@ -1246,6 +1246,39 @@ class TestGenerateFleet:
         )
 
         assert out.exists()
+
+    @patch("pmlogsynth.fleet.importlib.import_module")
+    def test_parallel_jobs_generates_all_archives(
+        self, mock_import: MagicMock, tmp_path: Path
+    ) -> None:
+        from pmlogsynth.fleet import generate_fleet, assign_hosts, load_fleet_profile
+
+        mock_writer_mod = MagicMock()
+        mock_writer_cls = MagicMock()
+        mock_writer_mod.ArchiveWriter = mock_writer_cls
+        mock_writer_mod.ArchiveConflictError = Exception
+        mock_writer_mod.ArchiveGenerationError = Exception
+        mock_import.return_value = mock_writer_mod
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assignments = assign_hosts(fleet, seed=42)
+
+        generate_fleet(
+            fleet=fleet,
+            assignments=assignments,
+            output_dir=tmp_path,
+            seed=42,
+            jobs=2,
+            force=False,
+            start=None,
+            verbose=False,
+            config_dir=None,
+        )
+
+        # All 5 archives generated even with --jobs=2
+        assert mock_writer_cls.call_count == 5
+        # Manifest still written
+        assert (tmp_path / "fleet.manifest").exists()
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -1351,14 +1384,21 @@ def generate_fleet(
                 file=sys.stderr,
             )
 
-    # Generate archives sequentially.
-    # NOTE: --jobs is accepted by the CLI but runs sequentially in v1.
-    # True parallel generation via ProcessPoolExecutor is deferred — the
-    # inner function captures too much state to be picklable. This is a
-    # known gap vs the design spec's Tier 2 "--jobs=2 dispatches correctly"
-    # test requirement. Will be addressed when scale demands it.
-    for assignment in assignments:
-        _generate_one(assignment)
+    # Generate archives — ThreadPoolExecutor for --jobs>1.
+    # Threads (not processes) because _generate_one is a closure and PCP
+    # archive writing is I/O-bound (disk writes), so GIL isn't a bottleneck.
+    if jobs <= 1:
+        for assignment in assignments:
+            _generate_one(assignment)
+    else:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {
+                pool.submit(_generate_one, a): a for a in assignments
+            }
+            for future in as_completed(futures):
+                future.result()  # raises if _generate_one failed
 
     # Write manifest
     write_manifest(output_dir / "fleet.manifest", fleet, assignments, seed=seed)
@@ -1474,12 +1514,14 @@ def _add_fleet_args(p: argparse.ArgumentParser) -> None:
         metavar="INT",
         help="PRNG seed for reproducible jitter and bad-actor assignment.",
     )
+    import os
+
     p.add_argument(
         "--jobs",
         type=int,
-        default=1,
+        default=os.cpu_count() or 1,
         metavar="INT",
-        help="Parallel archive generation workers (default: 1).",
+        help="Parallel archive generation workers (default: CPU count).",
     )
     p.add_argument(
         "--dry-run",

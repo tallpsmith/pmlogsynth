@@ -1,0 +1,17 @@
+meta:
+  name: test-fleet
+  duration: 600
+  interval: 60
+  hostname_prefix: host
+  hardware: generic-small
+
+hosts:
+  count: 5
+  baseline: baseline.yaml
+  jitter: 0.05
+
+bad_actors:
+  count: 1
+  jitter: 0.15
+  profiles:
+    - bad-cpu.yaml

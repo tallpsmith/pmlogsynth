@@ -5,13 +5,30 @@ from unittest.mock import patch
 
 import pytest
 
+import pmlogsynth
 from pmlogsynth.cli import (
     _ALL_METRIC_NAMES,
+    _build_parser,
     _cmd_list_metrics,
     main,
 )
 from pmlogsynth.profile import ValidationError
 from pmlogsynth.time_parsing import parse_absolute_timestamp
+
+
+def test_version_is_a_nonempty_string() -> None:
+    """__version__ should always be a non-empty string."""
+    assert isinstance(pmlogsynth.__version__, str)
+    assert len(pmlogsynth.__version__) > 0
+
+
+def test_version_flag_uses_dynamic_version(capsys: pytest.CaptureFixture[str]) -> None:
+    """Version flag should display the dynamically derived version."""
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--version"])
+    captured = capsys.readouterr()
+    assert pmlogsynth.__version__ in captured.out
 
 
 def test_list_metrics_output_is_sorted() -> None:

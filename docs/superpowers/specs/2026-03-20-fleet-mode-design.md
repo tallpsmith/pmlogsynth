@@ -22,6 +22,16 @@ hosts to workload profiles (with random bad-actor selection), then calls the exi
 `ArchiveWriter` once per host. No overlay engine, no merge logic — bad actors use
 complete standalone workload profiles.
 
+### Relationship to Phase 3 Spec
+
+This design **supersedes** `pmlogsynth-phase3-spec.md` for the initial fleet
+implementation. The Phase 3 spec describes a more complex architecture with anomaly
+overlays, time-windowed fault injection, and multi-group host definitions. This design
+intentionally simplifies to the minimum viable fleet: one host group, complete
+standalone profiles for bad actors, no overlay merging. The fleet YAML schema is
+different from the Phase 3 spec (`hosts:` + `bad_actors:` vs `groups:` with
+`anomalies:`). Future enhancements may reintroduce Phase 3 concepts incrementally.
+
 ---
 
 ## 1. Fleet Profile Format
@@ -93,6 +103,7 @@ Options:
   --dry-run                  Print host->profile assignments without generating
   --force                    Overwrite existing archive files
   --validate                 Validate fleet + referenced profiles, then exit
+                             (incompatible with --force and --dry-run)
   --start TIMESTAMP          Archive start time (same formats as generate)
   -v, --verbose              Per-host progress output
   -C, --config-dir PATH      Additional hardware profile directory
@@ -182,10 +193,26 @@ archives:
   clamp ratios to [0.0, 1.0] and counters to >= 0. Returns new `WorkloadProfile`.
   Pure function, no mutation.
 
+### Per-host WorkloadProfile construction
+
+`generate_fleet` produces a per-host `WorkloadProfile` by:
+
+1. Loading the workload profile via existing `ProfileLoader.from_file()`
+2. Using `dataclasses.replace()` to override `meta.hostname`, `meta.duration`,
+   `meta.interval`, `meta.timezone` with fleet-level values
+3. Passing through `apply_jitter()` to apply the host's jitter factor
+4. Handing the resulting `WorkloadProfile` to `ArchiveWriter` as normal
+
+Hardware profile resolution uses `ProfileResolver` with the fleet-level hardware name.
+No changes to `ProfileLoader` or `ArchiveWriter` — all construction happens in `fleet.py`.
+
 ### Changes to existing modules
 
-- **`cli.py`**: Wire up `fleet` subparser, replace stub with call to `generate_fleet()`
-- **`profile.py`**: No changes
+- **`cli.py`**: Replace the `fleet` stub parser (line 134) with a fully-wired subparser
+  via a new `_add_fleet_args()` function (mirroring `_add_generate_args()`). Replace
+  the stub handler with a call to `generate_fleet()`.
+- **`profile.py`**: No changes — `WorkloadProfile` is a dataclass, `dataclasses.replace()`
+  handles per-host construction without modifying the loader.
 - **`writer.py`**: No changes
 
 ### What we're NOT building
@@ -199,7 +226,9 @@ archives:
 ## 5. Jitter Design
 
 1. Fleet profile specifies `jitter: 0.05` (baseline) and optionally `bad_actors.jitter: 0.15`
-2. Per-host PRNG seeded with `hash(global_seed, hostname)`
+2. Per-host PRNG seeded deterministically: `hashlib.sha256(f'{seed}:{hostname}'.encode())`
+   truncated to an integer. **Do NOT use Python's built-in `hash()`** — it is randomized
+   across processes (PYTHONHASHSEED) and would break reproducibility.
 3. Single jitter factor drawn per host: `Normal(mean=1.0, stddev=jitter)`
 4. Every numeric stressor value in every phase multiplied by that factor
 5. Post-jitter clamping: ratios to [0.0, 1.0], counters >= 0
@@ -207,6 +236,18 @@ archives:
 
 Single factor per host (not per field) gives coherent variation — a "slightly busier
 box" is busier across the board, not randomly hot on CPU but cold on memory.
+
+### Ratio vs Unrestricted Fields
+
+Jitter clamping requires knowing which stressor fields are ratios (clamped `[0, 1]`)
+vs throughput/count fields (clamped `>= 0` only):
+
+**Ratio fields** (clamp `[0.0, 1.0]`): `utilization`, `user_ratio`, `sys_ratio`,
+`iowait_ratio`, `steal_ratio`, `used_ratio`, `cache_ratio`, `noise`, `error_rate`
+
+**Throughput/count fields** (clamp `>= 0`): `read_mbps`, `write_mbps`, `iops_read`,
+`iops_write`, `rx_mbps`, `tx_mbps`, `pps_rx`, `pps_tx`, `avg_request_size_kb`,
+`load_1min`, `load_5min`, `load_15min`
 
 ---
 

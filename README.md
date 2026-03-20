@@ -116,17 +116,32 @@ pmlogsynth --list-metrics    # show all producible PCP metrics
 pmlogsynth --show-schema     # dump the full profile schema (for AI agents)
 ```
 
-### 6. Generate a profile with AI
+### 6. Generate profiles with AI
 
-If you're using [Claude Code](https://claude.ai/claude-code), the `/generate-profile`
-skill can turn a plain-English description into a valid YAML profile:
+If you're using [Claude Code](https://claude.ai/claude-code) with this repo checked out,
+two built-in skills can generate YAML profiles from plain-English descriptions,
+validate them, and generate the actual PCP archives — all in one step:
+
+**Single-host workload profiles** — just describe the scenario:
 
 ```
-/generate-profile a 1-hour archive of a memory-constrained host under heavy disk I/O
+> simulate a 24-hour web server with overnight quiet, morning ramp, and daytime peak
+> create a 1-hour archive of a memory-constrained host under heavy disk I/O
+> take docs/spike.yml and add memory pressure during the spike phase
 ```
 
-The skill feeds `--show-schema` output to the model as context, so the generated profile
-is always valid against the current schema.
+**Fleet profiles** (multiple hosts with bad actors) — describe the fleet:
+
+```
+> generate a fleet of 20 web servers where 3 have CPU saturation problems
+> I need a 50-host database cluster on memory-optimized hardware with some hosts
+  showing memory pressure and disk thrashing
+> create a small 5-host dev cluster with normal web traffic for an hour
+```
+
+The skills bundle the full schema as context, validate the output, and run
+`pmlogsynth` to generate the PCP archives — ready to inspect with `pmstat`,
+`pmval`, or `pmrep`. All output goes to `generated-archives/`.
 
 ---
 

@@ -9,7 +9,7 @@ FLEET_FIXTURES = Path(__file__).parent.parent / "fixtures" / "fleet"
 class TestGenerateFleet:
     """Tests for the fleet generation orchestrator."""
 
-    @patch("pmlogsynth.fleet.importlib.import_module")
+    @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
     def test_generates_correct_number_of_archives(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:
@@ -39,7 +39,7 @@ class TestGenerateFleet:
 
         assert mock_writer_cls.call_count == 5
 
-    @patch("pmlogsynth.fleet.importlib.import_module")
+    @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
     def test_manifest_written_after_generation(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:
@@ -68,7 +68,7 @@ class TestGenerateFleet:
 
         assert (tmp_path / "fleet.manifest").exists()
 
-    @patch("pmlogsynth.fleet.importlib.import_module")
+    @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
     def test_fleet_overrides_applied_to_profiles(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:
@@ -103,7 +103,7 @@ class TestGenerateFleet:
             assert profile.meta.duration == fleet.meta.duration
             assert profile.meta.interval == fleet.meta.interval
 
-    @patch("pmlogsynth.fleet.importlib.import_module")
+    @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
     def test_output_directory_created(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:
@@ -133,7 +133,7 @@ class TestGenerateFleet:
 
         assert out.exists()
 
-    @patch("pmlogsynth.fleet.importlib.import_module")
+    @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
     def test_parallel_jobs_generates_all_archives(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:

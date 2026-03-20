@@ -29,10 +29,13 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
 - Add `[tool.hatch.build.hooks.vcs]` to auto-generate `pmlogsynth/_version.py`
 - Use `local_scheme = "no-local-version"` (PyPI rejects local version segments)
 - Tag pattern: default `v*` prefix — hatch-vcs strips the `v` automatically
-- Man page installation: drop `data-files` from wheel entirely. Hatchling has no
-  native `data-files` equivalent, and man page installation is a system-packaging
-  concern (deferred with RPM/Debian). The man page source remains in the repo
-  and is included in the sdist for downstream packagers.
+- Man page installation: migrate from setuptools `data-files` to hatchling's
+  `[tool.hatch.build.targets.wheel.shared-data]` which maps files into the
+  wheel's data directory. pip installs them to the correct location:
+  ```toml
+  [tool.hatch.build.targets.wheel.shared-data]
+  "man/pmlogsynth.1" = "share/man/man1/pmlogsynth.1"
+  ```
 - Package data (`profiles/*.yaml`, `schema_context.md`): hatchling includes all
   tracked files by default, so these are automatically included. Verify during
   implementation that the built wheel contains them.

@@ -1,0 +1,19 @@
+meta:
+  hostname: bad-host
+  duration: 600
+  interval: 60
+
+host:
+  profile: generic-small
+
+phases:
+  - name: saturated
+    duration: 600
+    cpu:
+      utilization: 0.96
+      user_ratio: 0.85
+      sys_ratio: 0.10
+      iowait_ratio: 0.05
+    memory:
+      used_ratio: 0.70
+      cache_ratio: 0.10

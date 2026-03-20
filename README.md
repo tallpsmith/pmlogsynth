@@ -174,6 +174,25 @@ This is useful for replaying realistic-looking archives anchored to "now" —
 for example, a simulated spike that started an hour ago.  Positive offsets
 (`+30m`) and bare `-` are rejected with a descriptive error.
 
+### Fleet Mode
+
+Generate a fleet of PCP archives — one per host — from a single fleet profile.
+Each host gets per-host stressor jitter for realistic variation across the fleet.
+
+```bash
+# Preview host assignments without generating archives
+pmlogsynth fleet --dry-run fleet-profile.yml
+
+# Generate a 20-host fleet with deterministic assignment
+pmlogsynth fleet --seed 42 -o ./generated-archives/my-fleet fleet-profile.yml
+```
+
+The output directory contains one PCP archive per host plus a `fleet.manifest`
+YAML file recording hostnames, roles, jitter factors, and the seed.
+
+See [`docs/profile-format.md`](docs/profile-format.md#fleet-profile-format) for
+the full fleet YAML schema.
+
 ---
 
 ## Metrics

@@ -23,6 +23,10 @@ pmlogsynth \- generate synthetic PCP archives from declarative YAML profiles
 \fB\-\-validate\fR
 [\fB\-C\fR \fIDIR\fR]
 \fIPROFILE\fR
+.br
+.B pmlogsynth fleet
+[\fIFLEET OPTIONS\fR]
+\fIFLEET_PROFILE\fR
 .SH DESCRIPTION
 .B pmlogsynth
 reads a YAML workload profile and writes a valid PCP version 3 archive
@@ -454,6 +458,88 @@ Per-interface receive/transmit error counts (cumulative counter).
 All per-interface instance names match
 .I interface.name
 fields in the hardware profile.
+.SH FLEET SUBCOMMAND
+The
+.B fleet
+subcommand generates a fleet of PCP archives from a single fleet profile YAML
+file.
+Each host in the fleet gets its own PCP archive, with per-host stressor jitter
+applied for realistic variation.
+A
+.I fleet.manifest
+YAML file is written alongside the archives recording all host assignments.
+.PP
+Fleet profiles are distinct from workload profiles.
+A fleet profile specifies a set of hosts sharing a common hardware profile,
+a baseline workload, and optional bad-actor hosts with different workload
+profiles.
+Workload profile paths are resolved relative to the fleet profile file.
+.PP
+Fleet-level
+.BR meta.duration ,
+.BR meta.interval ,
+and
+.B meta.hardware
+override the corresponding values in individual workload profiles.
+.SS Fleet Options
+.TP
+\fIFLEET_PROFILE\fR
+Path to the fleet profile YAML file (required).
+.TP
+.BI \-o " PATH" ", \-\-output\-dir " PATH
+Output directory for generated archives.
+Default:
+.IR ./generated\-archives/fleet\-<name> .
+.TP
+.BI \-\-seed " N"
+Random seed for deterministic host assignment and jitter.
+If omitted, a random seed is chosen.
+.TP
+.BI \-\-jobs " N"
+Number of parallel archive generation jobs (default: CPU count).
+.TP
+.B \-\-dry\-run
+Print the host assignment table (hostnames, roles, jitter factors)
+without generating any archives.
+.TP
+.B \-\-force
+Overwrite existing archive files without error.
+.TP
+.B \-\-validate
+Validate the fleet profile only; do not generate any files.
+Exits 0 on success, 1 on validation error.
+.TP
+.BI \-\-start " TIMESTAMP"
+Archive start time for all hosts.
+Same format as the generate subcommand.
+.TP
+.BR \-v ", " \-\-verbose
+Print per-host generation progress to stderr.
+.TP
+.BI \-C " DIR" ", \-\-config\-dir " DIR
+Additional hardware profile directory (highest precedence).
+.SS Fleet Profile Format
+A fleet profile YAML file has three top-level sections:
+.TP
+.B meta
+Fleet-wide settings:
+.BR name " (string, required),"
+.BR duration " (duration string, required),"
+.BR interval " (duration string, required),"
+.BR hostname_prefix " (string, required),"
+.BR hardware " (named hardware profile, required)."
+.TP
+.B hosts
+Baseline host pool:
+.BR count " (integer, required),"
+.BR baseline " (path to workload profile, required),"
+.BR jitter " (float, default 0.0 \(em Gaussian noise standard deviation)."
+.TP
+.B bad_actors
+Optional bad-actor host pool:
+.BR count " (integer, default 0 \(em must not exceed hosts.count),"
+.BR jitter " (float, inherits hosts.jitter if absent),"
+.BR profiles " (list of paths to workload profiles)."
 .SH EXAMPLES
 .SS Generate a 10-minute archive with a CPU spike
 .nf
@@ -483,6 +569,16 @@ pmlogsynth \-C ./tests/fixtures/profiles \-\-list\-profiles
 .SS List all producible metrics
 .nf
 pmlogsynth \-\-list\-metrics
+.fi
+.SS Generate a 20-host fleet with deterministic assignment
+.nf
+pmlogsynth fleet \-\-seed 42 \-o ./generated\-archives/prod\-fleet fleet.yml
+ls ./generated\-archives/prod\-fleet/
+# prod\-web\-01.0  prod\-web\-01.index  ...  fleet.manifest
+.fi
+.SS Preview fleet host assignments without generating archives
+.nf
+pmlogsynth fleet \-\-dry\-run fleet.yml
 .fi
 .SH EXIT STATUS
 .TP

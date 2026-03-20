@@ -298,3 +298,23 @@ class TestOverrideWarnings:
         with caplog.at_level(logging.WARNING):
             check_override_warnings(fleet)
         assert not any("duration" in r.message for r in caplog.records)
+
+
+class TestDryRun:
+    """Tests for --dry-run output formatting."""
+
+    def test_dry_run_prints_all_hosts(self, capsys: pytest.CaptureFixture) -> None:
+        from pmlogsynth.fleet import assign_hosts, load_fleet_profile, print_dry_run
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assignments = assign_hosts(fleet, seed=42)
+        print_dry_run(fleet, assignments, seed=42)
+
+        captured = capsys.readouterr()
+        assert "test-fleet" in captured.out
+        assert "5 hosts" in captured.out
+        for a in assignments:
+            assert a.hostname in captured.out
+        bad = [a for a in assignments if a.role == "bad_actor"]
+        for b in bad:
+            assert "BAD" in captured.out

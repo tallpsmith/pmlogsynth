@@ -1,9 +1,11 @@
 """Fleet profile loading, validation, and host assignment."""
 
 import hashlib
+import importlib
 import logging
 import random
-from dataclasses import dataclass, field
+import sys
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -349,3 +351,109 @@ def check_override_warnings(fleet: FleetProfile) -> None:
                     "— overridden by fleet setting hardware=%s",
                     wrel, profile_hw, fleet.meta.hardware,
                 )
+
+
+def print_dry_run(
+    fleet: FleetProfile,
+    assignments: List[HostAssignment],
+    seed: Optional[int],
+) -> None:
+    """Print host assignment table without generating archives."""
+    seed_str = str(seed) if seed is not None else "none"
+    print("Fleet: {} ({} hosts, seed={})".format(
+        fleet.meta.name, len(assignments), seed_str,
+    ))
+    print()
+    for a in assignments:
+        role_label = "BAD      " if a.role == "bad_actor" else "baseline "
+        print("  {}  {}  {}  (jitter: x{:.2f})".format(
+            a.hostname, role_label, a.workload_rel, a.jitter_factor,
+        ))
+
+
+def generate_fleet(
+    fleet: FleetProfile,
+    assignments: List[HostAssignment],
+    output_dir: Path,
+    seed: Optional[int],
+    jobs: int = 1,
+    force: bool = False,
+    start: Optional[datetime] = None,
+    verbose: bool = False,
+    config_dir: Optional[Path] = None,
+) -> None:
+    """Generate one PCP archive per host, then write fleet.manifest."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Lazy import writer module (avoid PCP dependency at parse time)
+    _writer_mod = importlib.import_module("pmlogsynth.writer")
+    ArchiveWriter = _writer_mod.ArchiveWriter
+
+    from pmlogsynth.jitter import apply_jitter
+    from pmlogsynth.profile import ProfileResolver, WorkloadProfile
+    from pmlogsynth.sampler import ValueSampler
+    from pmlogsynth.timeline import TimelineSequencer
+
+    # Resolve hardware profile once (shared across all hosts)
+    resolver = ProfileResolver(config_dir=config_dir)
+    hardware = resolver.resolve(fleet.meta.hardware)
+
+    # Check for override warnings (once, before generation loop)
+    check_override_warnings(fleet)
+
+    def _generate_one(assignment: HostAssignment) -> None:
+        """Generate a single host archive."""
+        profile_text = assignment.workload_path.read_text(encoding="utf-8")
+        profile = WorkloadProfile.from_string(
+            profile_text, config_dir=config_dir,
+        )
+
+        overridden_meta = replace(
+            profile.meta,
+            hostname=assignment.hostname,
+            duration=fleet.meta.duration,
+            interval=fleet.meta.interval,
+        )
+        profile = replace(profile, meta=overridden_meta, hardware=hardware)
+
+        profile = apply_jitter(profile, assignment.jitter_factor)
+
+        timeline = TimelineSequencer(profile).expand(start_time=start)
+        sampler = ValueSampler(noise=profile.meta.noise)
+
+        output_path = str(output_dir / assignment.hostname)
+        writer = ArchiveWriter(
+            output_path=output_path,
+            profile=profile,
+            hardware=hardware,
+            force=force,
+        )
+        writer.write(timeline=timeline, sampler=sampler)
+
+        if verbose:
+            print(
+                "  generated: {} ({})".format(
+                    assignment.hostname, assignment.role,
+                ),
+                file=sys.stderr,
+            )
+
+    # Generate archives — ThreadPoolExecutor for --jobs>1.
+    if jobs <= 1:
+        for assignment in assignments:
+            _generate_one(assignment)
+    else:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {
+                pool.submit(_generate_one, a): a for a in assignments
+            }
+            for future in as_completed(futures):
+                future.result()
+
+    # Write manifest
+    write_manifest(
+        output_dir / "fleet.manifest", fleet, assignments, seed=seed,
+    )

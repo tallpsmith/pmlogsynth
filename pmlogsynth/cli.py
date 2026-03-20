@@ -1,6 +1,7 @@
 """CLI entry point for pmlogsynth."""
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -130,8 +131,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="subcommand")
 
-    # Reserve 'fleet' for Phase 3
-    subparsers.add_parser("fleet", help=argparse.SUPPRESS)
+    # --- fleet subcommand ---
+    fleet_parser = subparsers.add_parser(
+        "fleet",
+        help="Generate a fleet of PCP archives from a fleet profile.",
+        add_help=True,
+    )
+    _add_fleet_args(fleet_parser)
 
     # --- generate (default, injected by _preprocess_argv when no subcommand) ---
     gen = subparsers.add_parser(
@@ -199,6 +205,76 @@ def _add_generate_args(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_fleet_args(p: argparse.ArgumentParser) -> None:
+    """Add fleet-command arguments to the fleet subparser."""
+    p.add_argument(
+        "fleet_profile",
+        metavar="FLEET_PROFILE",
+        help="Path to YAML fleet profile.",
+    )
+    p.add_argument(
+        "-o", "--output-dir",
+        metavar="PATH",
+        dest="output_dir",
+        help=(
+            "Output directory for fleet archives "
+            "(default: ./generated-archives/fleet-<name>)."
+        ),
+    )
+    p.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for deterministic host assignment.",
+    )
+    p.add_argument(
+        "--jobs",
+        type=int,
+        default=os.cpu_count() or 1,
+        metavar="N",
+        help="Parallel archive generation jobs (default: cpu count).",
+    )
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        dest="dry_run",
+        help="Print host assignments without generating archives.",
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Overwrite existing archive files without error.",
+    )
+    p.add_argument(
+        "--validate",
+        action="store_true",
+        default=False,
+        help="Validate fleet profile only; do not generate any files.",
+    )
+    p.add_argument(
+        "--start",
+        metavar="TIMESTAMP",
+        help=(
+            "Archive start time (ISO 8601 or 'YYYY-MM-DD HH:MM:SS TZ'). "
+            "Default: today at 00:00:00 UTC."
+        ),
+    )
+    p.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        default=False,
+        help="Print per-host generation progress to stderr.",
+    )
+    p.add_argument(
+        "-C", "--config-dir",
+        metavar="PATH",
+        dest="config_dir",
+        help="Additional hardware profile directory (highest precedence).",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
@@ -242,6 +318,92 @@ def _cmd_validate(profile_path: str, config_dir: Optional[Path]) -> int:
     except OSError as exc:
         print(f"Error reading profile: {exc}", file=sys.stderr)
         return 2
+
+
+def _cmd_fleet(args: argparse.Namespace) -> int:
+    """Handle the fleet subcommand."""
+    config_dir = Path(args.config_dir) if args.config_dir else None
+
+    # Validate flag incompatibilities
+    if args.validate:
+        for flag in ("force", "dry_run"):
+            if getattr(args, flag, False):
+                print(
+                    "error: --validate is incompatible with "
+                    "--{}".format(flag.replace("_", "-")),
+                    file=sys.stderr,
+                )
+                return 1
+
+    # Load fleet profile
+    from pmlogsynth.fleet import (
+        assign_hosts,
+        check_override_warnings,
+        generate_fleet,
+        load_fleet_profile,
+        print_dry_run,
+    )
+
+    try:
+        fleet = load_fleet_profile(Path(args.fleet_profile))
+    except ValidationError as exc:
+        print("Validation error: {}".format(exc), file=sys.stderr)
+        return 1
+    except OSError as exc:
+        print("Error reading fleet profile: {}".format(exc), file=sys.stderr)
+        return 2
+
+    # --validate mode
+    if args.validate:
+        check_override_warnings(fleet)
+        print("fleet profile '{}' is valid".format(fleet.meta.name))
+        return 0
+
+    # --dry-run mode
+    if args.dry_run:
+        assignments = assign_hosts(fleet, seed=args.seed)
+        print_dry_run(fleet, assignments, seed=args.seed)
+        return 0
+
+    # Full generation
+    start_time = None
+    if args.start:
+        from pmlogsynth.time_parsing import parse_absolute_timestamp
+        try:
+            start_time = parse_absolute_timestamp(args.start, field="--start")
+        except ValidationError as exc:
+            print("error: {}".format(exc), file=sys.stderr)
+            return 1
+
+    output_dir_str = args.output_dir
+    if not output_dir_str:
+        output_dir_str = str(
+            Path("generated-archives") / "fleet-{}".format(fleet.meta.name)
+        )
+    output_dir = Path(output_dir_str)
+
+    assignments = assign_hosts(fleet, seed=args.seed)
+
+    try:
+        generate_fleet(
+            fleet=fleet,
+            assignments=assignments,
+            output_dir=output_dir,
+            seed=args.seed,
+            jobs=args.jobs,
+            force=args.force,
+            start=start_time,
+            verbose=args.verbose,
+            config_dir=config_dir,
+        )
+    except Exception as exc:
+        print("error: Fleet generation failed: {}".format(exc), file=sys.stderr)
+        return 3
+
+    print("Fleet '{}': {} archives written to {}".format(
+        fleet.meta.name, len(assignments), output_dir,
+    ))
+    return 0
 
 
 def _cmd_generate(args: argparse.Namespace) -> int:
@@ -401,10 +563,9 @@ def main() -> None:
     if hasattr(args, "config_dir") and args.config_dir:
         config_dir = Path(args.config_dir)
 
-    # Fleet stub
+    # Fleet subcommand
     if args.subcommand == "fleet":
-        print("error: fleet subcommand not yet implemented", file=sys.stderr)
-        sys.exit(2)
+        sys.exit(_cmd_fleet(args))
 
     # Informational commands (top-level flags, checked before subcommand)
     if getattr(args, "show_schema", False):

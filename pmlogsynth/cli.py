@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+from pmlogsynth import __version__
 from pmlogsynth.profile import ProfileResolver, ValidationError, WorkloadProfile
 
 # ---------------------------------------------------------------------------
@@ -98,7 +99,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-V", "--version",
         action="version",
-        version="%(prog)s 0.1.0",
+        version="%(prog)s " + __version__,
     )
 
     # Top-level informational flags

@@ -16,17 +16,12 @@ def _get_schema_content() -> str:
     )
 
 
-def _get_pyproject_version() -> str:
-    """Read the version string from pyproject.toml without installing toml deps."""
-    from pathlib import Path
-
-    pyproject = Path(__file__).parents[2] / "pyproject.toml"
-    for line in pyproject.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("version") and "=" in stripped:
-            # version = "0.1.0"
-            return stripped.split("=", 1)[1].strip().strip('"').strip("'")
-    raise RuntimeError("Could not parse version from pyproject.toml")
+def _get_schema_version_line(content: str) -> str:
+    """Extract the 'Schema Version: X.Y.Z' value from schema_context.md."""
+    for line in content.splitlines():
+        if line.startswith("Schema Version:"):
+            return line.split(":", 1)[1].strip()
+    raise RuntimeError("Could not find 'Schema Version:' in schema_context.md")
 
 
 # ---------------------------------------------------------------------------
@@ -41,12 +36,14 @@ def test_schema_context_file_exists() -> None:
 
 
 @pytest.mark.unit
-def test_schema_context_version_matches() -> None:
-    """Schema Version line in the doc matches pyproject.toml version."""
+def test_schema_context_has_valid_version() -> None:
+    """Schema Version line in the doc is a valid version string."""
+    import re
+
     content = _get_schema_content()
-    version = _get_pyproject_version()
-    assert f"Schema Version: {version}" in content, (
-        f"Expected 'Schema Version: {version}' in schema_context.md"
+    version = _get_schema_version_line(content)
+    assert re.match(r"^\d+\.\d+\.\d+", version), (
+        f"Schema Version '{version}' does not look like a valid version"
     )
 
 

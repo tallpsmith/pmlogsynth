@@ -28,12 +28,25 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
 - Add `[tool.hatch.version]` with `source = "vcs"`
 - Add `[tool.hatch.build.hooks.vcs]` to auto-generate `pmlogsynth/_version.py`
 - Use `local_scheme = "no-local-version"` (PyPI rejects local version segments)
-- Migrate package-data and man-page data-files to hatchling format
+- Tag pattern: default `v*` prefix — hatch-vcs strips the `v` automatically
+- Man page installation: drop `data-files` from wheel entirely. Hatchling has no
+  native `data-files` equivalent, and man page installation is a system-packaging
+  concern (deferred with RPM/Debian). The man page source remains in the repo
+  and is included in the sdist for downstream packagers.
+- Package data (`profiles/*.yaml`, `schema_context.md`): hatchling includes all
+  tracked files by default, so these are automatically included. Verify during
+  implementation that the built wheel contains them.
 
 ### pmlogsynth/__init__.py
 
 - Replace hardcoded `__version__ = "0.1.0"` with import from `_version.py`
-- Include fallback for editable installs before first build
+- Fallback pattern for editable installs / pre-build state:
+  ```python
+  try:
+      from pmlogsynth._version import __version__
+  except ImportError:
+      __version__ = "0.0.0+unknown"
+  ```
 
 ### pmlogsynth/_version.py
 
@@ -42,7 +55,23 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
 
 ### cli.py
 
-- Version display (`--version`) reads from `__init__.__version__` — verify chain works
+- **Required change:** `cli.py` currently has a hardcoded `version="%(prog)s 0.1.0"`.
+  This must be updated to import and use `__version__` from `pmlogsynth.__init__`.
+
+### PCP system dependency notice
+
+`python3-pcp` is not pip-installable. Users who `pip install pcp-pmlogsynth` need
+PCP installed separately. Address this via:
+- Prominent note in the PyPI long-description (README.md) stating the system dependency
+- A runtime check in `cli.py` (or `writer.py`) that produces a helpful error message
+  if `pcp` is not importable, rather than a raw ImportError traceback
+
+### Build environment vs runtime target
+
+`requires-python = ">=3.8"` is the runtime target. The build environment (GitHub Actions)
+uses a newer Python. Pin `hatch-vcs` to a version compatible with Python 3.8 runtime
+if any build-time generated code must run on 3.8. In practice, `_version.py` is pure
+string assignment and has no compatibility concerns.
 
 ## Section 2: Release Workflow
 
@@ -52,8 +81,9 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
 
 **Job 1 — validate:**
 - Checkout with `fetch-depth: 0`, `fetch-tags: true`
-- Normalize git tag through `packaging.version.Version`
-- Compare against `hatchling version` output
+- Install `hatch` CLI (not just `hatchling` library) — needed for `hatch version`
+- Normalize git tag through `packaging.version.Version` (strip `v` prefix first)
+- Compare against `hatch version` output
 - Fail on mismatch
 
 **Job 2 — pypi:**
@@ -78,10 +108,11 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
   - Workflow: `release.yml`
   - Environment: `pypi`
 
-### First Release
-- Tag `v0.1.0` on the target commit
-- Create GitHub Release from the tag
-- Workflow fires automatically
+### First Release — TestPyPI dry-run recommended
+- First publish should target TestPyPI to verify OIDC plumbing works before
+  burning the `pcp-pmlogsynth` 0.1.0 version number on real PyPI (version
+  numbers are permanent and cannot be re-uploaded if something goes wrong)
+- After TestPyPI success: tag `v0.1.0`, create GitHub Release, workflow fires
 
 ## Files Changed
 
@@ -89,12 +120,13 @@ RPM/Debian packaging explicitly deferred — PyPI only for now.
 |---|---|
 | Build backend migration | `pyproject.toml` |
 | Dynamic version import | `pmlogsynth/__init__.py` |
+| Fix hardcoded version | `pmlogsynth/cli.py` |
 | Ignore generated version file | `.gitignore` |
 | Release workflow | `.github/workflows/release.yml` |
 
 ## Out of Scope
 
 - RPM/Debian packaging (deferred)
-- TestPyPI publishing (can add later)
+- Ongoing TestPyPI publishing (one-time dry-run recommended above)
 - Changelog generation
-- Changes to existing CI, tests, or domain code
+- Changes to existing tests or domain code

@@ -1,11 +1,13 @@
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
-name = "pmlogsynth"
-version = "0.1.0"
+name = "pcp-pmlogsynth"
+dynamic = ["version"]
 description = "Synthetic PCP archive generator from declarative YAML workload profiles"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.8"
 dependencies = ["PyYAML>=5.1"]
 
@@ -16,15 +18,20 @@ ai  = ["anthropic>=0.20.0"]
 [project.scripts]
 pmlogsynth = "pmlogsynth.cli:main"
 
-[tool.setuptools.data-files]
-"share/man/man1" = ["man/pmlogsynth.1"]
+[tool.hatch.build.targets.wheel]
+packages = ["pmlogsynth"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["pmlogsynth*"]
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.package-data]
-pmlogsynth = ["profiles/*.yaml", "schema_context.md"]
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "pmlogsynth/_version.py"
+
+[tool.hatch.build.targets.wheel.shared-data]
+"man/pmlogsynth.1" = "share/man/man1/pmlogsynth.1"
 
 [tool.ruff]
 target-version = "py38"

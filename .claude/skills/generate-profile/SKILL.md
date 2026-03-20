@@ -17,12 +17,15 @@ Generate a valid pmlogsynth YAML workload profile from a natural language descri
 The profile describes a single host's workload over time using phases with CPU, memory,
 disk, and network stressors.
 
-## Step 1 — Get the Schema
+## Step 1 — Get the Schema and Bootstrap
 
-Read the reference file at `references/profile-schema.md` (relative to this skill's
-directory). This contains the complete, authoritative schema for workload profiles —
-every field, type, default, constraint, and common validation error.
+Read these reference files (relative to this skill's directory):
 
+1. `references/profile-schema.md` — the complete, authoritative schema for workload
+   profiles (every field, type, default, constraint, and common validation error)
+2. `references/running-pmlogsynth.md` — how to bootstrap and run pmlogsynth
+
+Before any validation or generation, run `uv sync` to ensure the environment is ready.
 Do NOT run `pmlogsynth --show-schema` — the bundled reference is identical and faster.
 
 ## Step 2 — Understand the Workload
@@ -84,8 +87,10 @@ Example: "10-minute CPU spike at 90%" → `generated-archives/10-minute-cpu-spik
 ## Step 6 — Validate
 
 ```bash
-pmlogsynth --validate generated-archives/<filename>.yaml
+uv run pmlogsynth --validate generated-archives/<filename>.yaml
 ```
+
+If `uv run` fails because dependencies aren't synced, run `uv sync` first.
 
 - **Exit 0**: Profile is valid. Proceed to Step 7.
 - **Exit 1** (validation error): Feed the error back into the generation, fix the YAML,
@@ -93,15 +98,24 @@ pmlogsynth --validate generated-archives/<filename>.yaml
   user and stop.
 - **Exit 2** (I/O error): Report the error and stop.
 
-## Step 7 — Report
+## Step 7 — Generate the Archive
+
+After validation passes, generate the actual PCP archive. Derive the archive name from
+the profile filename (strip the `.yaml` extension):
+
+```bash
+uv run pmlogsynth -o ./generated-archives/<name> generated-archives/<filename>.yaml
+```
+
+If generation fails, report the error to the user.
+
+## Step 8 — Report
 
 Tell the user:
-- Where the profile was saved
-- How to generate the archive:
-  ```bash
-  pmlogsynth -o ./generated-archives/<name> generated-archives/<filename>.yaml
-  ```
+- Where the profile YAML was saved
+- Where the archive was generated (the `.0`, `.index`, `.meta` files)
 - How to inspect the archive:
   ```bash
   pmstat -a ./generated-archives/<name>
+  pmval -a ./generated-archives/<name> kernel.all.cpu.user
   ```

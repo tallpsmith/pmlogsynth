@@ -33,13 +33,16 @@ A fleet profile is **not** a workload profile. It's a higher-level orchestrator:
 - **Fleet-level `duration` and `interval`** override whatever the individual workload
   profiles specify
 
-## Step 1 — Read the Schema References
+## Step 1 — Read the Schema References and Bootstrap
 
-Read both reference files (relative to this skill's directory):
+Read these reference files (relative to this skill's directory):
 
 1. `references/fleet-schema.md` — the fleet profile format, fields, and validation rules
 2. `references/workload-profile-schema.md` — the workload profile format (for generating
    the baseline and bad-actor workload profiles the fleet references)
+3. `references/running-pmlogsynth.md` — how to bootstrap and run pmlogsynth
+
+Before any validation or generation, run `uv sync` to ensure the environment is ready.
 
 ## Step 2 — Understand the Fleet Scenario
 
@@ -126,36 +129,42 @@ When the user describes problems, translate them into workload profiles:
 
 ## Step 5 — Validate
 
-Validate the workload profiles first (they must parse independently), then the fleet:
+Validate the workload profiles first (they must parse independently), then the fleet.
+If `uv run` fails because dependencies aren't synced, run `uv sync` first.
 
 ```bash
 # Validate individual workload profiles
-pmlogsynth --validate generated-archives/fleet-baseline.yaml
-pmlogsynth --validate generated-archives/fleet-bad-cpu.yaml
+uv run pmlogsynth --validate generated-archives/fleet-baseline.yaml
+uv run pmlogsynth --validate generated-archives/fleet-bad-cpu.yaml
 
 # Validate the fleet profile
-pmlogsynth fleet --validate generated-archives/20-host-web-cluster-fleet.yaml
+uv run pmlogsynth fleet --validate generated-archives/<fleet-file>.yaml
 ```
 
 - **Exit 0**: Valid. Proceed.
 - **Exit 1**: Fix the error and retry once.
 - **Exit 2**: I/O error — report and stop.
 
-## Step 6 — Report
+## Step 6 — Generate the Archives
+
+After validation passes, generate the actual PCP archives. Derive the output directory
+name from the fleet name in the profile:
+
+```bash
+uv run pmlogsynth fleet --seed 42 -o ./generated-archives/<fleet-name> generated-archives/<fleet-file>.yaml
+```
+
+Use `--seed 42` by default for reproducible host assignment. If generation fails, report
+the error to the user.
+
+## Step 7 — Report
 
 Tell the user:
-- All files saved and their paths
-- How to preview the fleet assignment:
+- All profile YAML files saved and their paths
+- Where the archives were generated
+- How to preview the host assignment:
   ```bash
-  pmlogsynth fleet --dry-run generated-archives/<fleet-file>.yaml
-  ```
-- How to generate the archives:
-  ```bash
-  pmlogsynth fleet -o ./generated-archives/<fleet-name> generated-archives/<fleet-file>.yaml
-  ```
-- How to generate with reproducible host assignment:
-  ```bash
-  pmlogsynth fleet --seed 42 -o ./generated-archives/<fleet-name> generated-archives/<fleet-file>.yaml
+  uv run pmlogsynth fleet --dry-run generated-archives/<fleet-file>.yaml
   ```
 - How to inspect individual archives:
   ```bash

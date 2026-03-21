@@ -77,6 +77,13 @@ def test_parse_start_invalid_raises() -> None:
         parse_absolute_timestamp("not-a-date", field="--start")
 
 
+def test_fleet_no_jobs_flag() -> None:
+    """--jobs flag was removed — PCP pmiLogImport is not thread-safe (#16)."""
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["fleet", "--jobs", "4", "some-file.yaml"])
+
+
 def test_fleet_subcommand_exits_2(capsys: pytest.CaptureFixture) -> None:
     """fleet subcommand without FLEET_PROFILE arg exits non-zero."""
     with patch("sys.argv", ["pmlogsynth", "fleet"]):

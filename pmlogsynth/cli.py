@@ -1,7 +1,6 @@
 """CLI entry point for pmlogsynth."""
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -229,13 +228,6 @@ def _add_fleet_args(p: argparse.ArgumentParser) -> None:
         help="Random seed for deterministic host assignment.",
     )
     p.add_argument(
-        "--jobs",
-        type=int,
-        default=os.cpu_count() or 1,
-        metavar="N",
-        help="Parallel archive generation jobs (default: cpu count).",
-    )
-    p.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -391,7 +383,6 @@ def _cmd_fleet(args: argparse.Namespace) -> int:
             assignments=assignments,
             output_dir=output_dir,
             seed=args.seed,
-            jobs=args.jobs,
             force=args.force,
             start=start_time,
             verbose=args.verbose,

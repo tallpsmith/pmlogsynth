@@ -43,13 +43,16 @@ def generate_fleet(
     assignments: List[HostAssignment],
     output_dir: Path,
     seed: Optional[int],
-    jobs: int = 1,
     force: bool = False,
     start: Optional[datetime] = None,
     verbose: bool = False,
     config_dir: Optional[Path] = None,
 ) -> None:
-    """Generate one PCP archive per host, then write fleet.manifest."""
+    """Generate one PCP archive per host, then write fleet.manifest.
+
+    Archives are generated sequentially — PCP's pmiLogImport C library
+    is not thread-safe (see https://github.com/tallpsmith/pmlogsynth/issues/16).
+    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -66,8 +69,7 @@ def generate_fleet(
     resolver = ProfileResolver(config_dir=config_dir)
     hardware = resolver.resolve(fleet.meta.hardware)
 
-    def _generate_one(assignment: HostAssignment) -> None:
-        """Generate a single host archive."""
+    for assignment in assignments:
         workload_yaml = _build_workload_yaml(fleet, assignment)
         profile = WorkloadProfile.from_string(
             workload_yaml, config_dir=config_dir,
@@ -94,22 +96,6 @@ def generate_fleet(
                 ),
                 file=sys.stderr,
             )
-
-    # Generate archives — sequential by default.
-    # NOTE: PCP's pmiLogImport C library is not thread-safe.
-    # See https://github.com/tallpsmith/pmlogsynth/issues/16
-    if jobs <= 1:
-        for assignment in assignments:
-            _generate_one(assignment)
-    else:
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
-        with ThreadPoolExecutor(max_workers=jobs) as pool:
-            futures = {
-                pool.submit(_generate_one, a): a for a in assignments
-            }
-            for future in as_completed(futures):
-                future.result()
 
     # Write manifest
     write_manifest(

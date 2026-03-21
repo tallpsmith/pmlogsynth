@@ -30,7 +30,6 @@ class TestGenerateFleet:
             assignments=assignments,
             output_dir=tmp_path,
             seed=42,
-            jobs=1,
             force=False,
             start=None,
             verbose=False,
@@ -59,7 +58,6 @@ class TestGenerateFleet:
             assignments=assignments,
             output_dir=tmp_path,
             seed=42,
-            jobs=1,
             force=False,
             start=None,
             verbose=False,
@@ -89,7 +87,6 @@ class TestGenerateFleet:
             assignments=assignments,
             output_dir=tmp_path,
             seed=42,
-            jobs=1,
             force=False,
             start=None,
             verbose=False,
@@ -124,7 +121,6 @@ class TestGenerateFleet:
             assignments=assignments,
             output_dir=out,
             seed=42,
-            jobs=1,
             force=False,
             start=None,
             verbose=False,
@@ -134,32 +130,14 @@ class TestGenerateFleet:
         assert out.exists()
 
     @patch("pmlogsynth.fleet.orchestrator.importlib.import_module")
-    def test_parallel_jobs_generates_all_archives(
+    def test_generate_fleet_no_jobs_parameter(
         self, mock_import: MagicMock, tmp_path: Path
     ) -> None:
-        from pmlogsynth.fleet import assign_hosts, generate_fleet, load_fleet_profile
+        """generate_fleet has no jobs parameter — PCP pmiLogImport is not
+        thread-safe (see issue #16), so parallel generation was removed."""
+        import inspect
 
-        mock_writer_mod = MagicMock()
-        mock_writer_cls = MagicMock()
-        mock_writer_mod.ArchiveWriter = mock_writer_cls
-        mock_writer_mod.ArchiveConflictError = Exception
-        mock_writer_mod.ArchiveGenerationError = Exception
-        mock_import.return_value = mock_writer_mod
+        from pmlogsynth.fleet import generate_fleet
 
-        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
-        assignments = assign_hosts(fleet, seed=42)
-
-        generate_fleet(
-            fleet=fleet,
-            assignments=assignments,
-            output_dir=tmp_path,
-            seed=42,
-            jobs=2,
-            force=False,
-            start=None,
-            verbose=False,
-            config_dir=None,
-        )
-
-        assert mock_writer_cls.call_count == 5
-        assert (tmp_path / "fleet.manifest").exists()
+        sig = inspect.signature(generate_fleet)
+        assert "jobs" not in sig.parameters

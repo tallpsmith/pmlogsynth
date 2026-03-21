@@ -15,31 +15,32 @@ description: >
 
 # Generate pmlogsynth Fleet Profile
 
-Generate a fleet profile that produces multiple PCP archives — one per simulated host —
-from a single YAML file. Fleet profiles describe a pool of hosts sharing common hardware,
+Generate a single self-contained fleet profile YAML that produces multiple PCP archives —
+one per simulated host. Fleet profiles describe a pool of hosts sharing common hardware,
 with a majority running a baseline workload and an optional minority running as "bad
-actors" with different workload profiles.
+actors" with different workload profiles. All workload definitions are inline — no
+external files needed.
 
 ## Key Concepts
 
 A fleet profile is **not** a workload profile. It's a higher-level orchestrator:
 
 - **All hosts share one hardware profile** (from `meta.hardware`)
-- **Baseline hosts** all run the same workload profile, with per-host jitter for variation
-- **Bad-actor hosts** are randomly selected from the pool and assigned workload profiles
+- **Workload profiles are defined inline** in a `profiles` section, referenced by name
+- **Baseline hosts** all run the same named profile, with per-host jitter for variation
+- **Bad-actor hosts** are randomly selected from the pool and assigned profiles
   from a separate list (e.g. CPU-saturated, memory-exhausted scenarios)
 - **Jitter** adds Gaussian noise (±N%) to all stressor values per host, so no two hosts
   are identical even if they share the same workload
-- **Fleet-level `duration` and `interval`** override whatever the individual workload
-  profiles specify
+- **Fleet-level `duration`, `interval`, and `hardware`** apply to all hosts
 
 ## Step 1 — Read the Schema References and Bootstrap
 
 Read these reference files (relative to this skill's directory):
 
 1. `references/fleet-schema.md` — the fleet profile format, fields, and validation rules
-2. `references/workload-profile-schema.md` — the workload profile format (for generating
-   the baseline and bad-actor workload profiles the fleet references)
+2. `references/workload-profile-schema.md` — the workload profile stressor format (for
+   generating the phase definitions inside named profiles)
 3. `references/running-pmlogsynth.md` — how to bootstrap and run pmlogsynth
 
 Before any validation or generation, run `uv sync` to ensure the environment is ready.
@@ -59,43 +60,23 @@ Key details to extract:
 - **Duration** — how long the simulation runs
 - **Hardware class** — what size machines (`generic-small` through `storage-optimized`)
 
-## Step 3 — Generate the Files
+## Step 3 — Generate the Fleet Profile YAML
 
-A fleet profile references external workload profile files. You need to generate **all**
-of these files:
-
-### 3a. Generate Workload Profiles
-
-Create the baseline and bad-actor workload profile YAML files. These are standard
-pmlogsynth workload profiles (same format as the generate-profile skill produces).
-
-Save them to `generated-archives/` alongside the fleet profile. For example:
-- `generated-archives/fleet-baseline.yaml` — the healthy workload
-- `generated-archives/fleet-bad-cpu.yaml` — a CPU-saturated workload
-- `generated-archives/fleet-bad-memory.yaml` — a memory-exhausted workload
-
-The workload profiles should be complete and valid on their own. The fleet will override
-their `duration`, `interval`, `hostname`, and `hardware` settings — but the profiles
-still need valid values for standalone validation.
-
-**Important:** Workload profile paths in the fleet YAML are resolved relative to the
-fleet profile file's directory. If the fleet profile and workload profiles are in the
-same directory, use just the filename (e.g. `baseline: fleet-baseline.yaml`).
-
-### 3b. Generate the Fleet Profile
-
-Produce the fleet profile YAML. Follow the format in `references/fleet-schema.md` exactly.
+Produce a single self-contained fleet profile YAML with all workload definitions inline.
+Follow the format in `references/fleet-schema.md` exactly.
 
 Rules:
 1. **Output raw YAML only** — no markdown fences, no prose
 2. **`meta` is required** — must include `name`, `duration`, `interval`,
    `hostname_prefix`, and `hardware`
-3. **`hosts` is required** — must include `count` and `baseline` (path to workload file)
-4. **`bad_actors` is optional** — include `count`, `profiles` list, and optionally `jitter`
-5. **`bad_actors.count` must not exceed `hosts.count`**
-6. **Use readable duration strings** (`10m`, `1h`, `24h`) for `duration` and `interval`
-7. **Add jitter** (typically 0.03–0.10) for realistic per-host variation
-8. **Include comments** explaining the fleet scenario
+3. **`profiles` is required** — define named workload profiles with `phases` lists
+4. **`hosts` is required** — must include `count` and `baseline` (name from `profiles`)
+5. **`bad_actors` is optional** — include `count`, `profiles` list (names from `profiles`),
+   and optionally `jitter`
+6. **`bad_actors.count` must not exceed `hosts.count`**
+7. **Use readable duration strings** (`10m`, `1h`, `24h`) for `duration` and `interval`
+8. **Add jitter** (typically 0.03–0.10) for realistic per-host variation
+9. **Include comments** explaining the fleet scenario
 
 ### Realistic Fleet Patterns
 
@@ -108,7 +89,7 @@ Rules:
 
 ### Named Fault Patterns for Bad Actors
 
-When the user describes problems, translate them into workload profiles:
+When the user describes problems, translate them into named profile definitions:
 
 | Fault | Key Characteristics |
 |-------|---------------------|
@@ -119,25 +100,19 @@ When the user describes problems, translate them into workload profiles:
 | Noisy neighbour | High CPU with elevated `sys_ratio` (virtualisation overhead) |
 | Slow drain | Gradual increase across all metrics over multiple phases |
 
-## Step 4 — Save All Files
+## Step 4 — Save the Fleet Profile
 
 1. Ensure `generated-archives/` exists
-2. Save workload profile(s) first
-3. Save the fleet profile with a descriptive slugified name:
+2. Save the fleet profile with a descriptive slugified name:
    - Example: "20-host web cluster with CPU problems" →
      `generated-archives/20-host-web-cluster-fleet.yaml`
 
 ## Step 5 — Validate
 
-Validate the workload profiles first (they must parse independently), then the fleet.
-If `uv run` fails because dependencies aren't synced, run `uv sync` first.
+Validate the fleet profile. If `uv run` fails because dependencies aren't synced,
+run `uv sync` first.
 
 ```bash
-# Validate individual workload profiles
-uv run pmlogsynth --validate generated-archives/fleet-baseline.yaml
-uv run pmlogsynth --validate generated-archives/fleet-bad-cpu.yaml
-
-# Validate the fleet profile
 uv run pmlogsynth fleet --validate generated-archives/<fleet-file>.yaml
 ```
 
@@ -160,7 +135,7 @@ the error to the user.
 ## Step 7 — Report
 
 Tell the user:
-- All profile YAML files saved and their paths
+- Fleet profile YAML saved and its path
 - Where the archives were generated
 - How to preview the host assignment:
   ```bash

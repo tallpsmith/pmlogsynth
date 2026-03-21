@@ -1,16 +1,18 @@
 # pmlogsynth Fleet Profile Schema
 
 A fleet profile generates multiple PCP archives — one per simulated host — from a single
-YAML file. It is a different document type from a workload profile.
+self-contained YAML file. All workload profiles are defined inline using named definitions
+in the `profiles` section.
 
 ---
 
 ## Top-Level Structure
 
-A fleet profile has three top-level sections:
+A fleet profile has four top-level sections:
 
 ```yaml
 meta:        # Fleet-wide settings (required)
+profiles:    # Named workload profile definitions (required)
 hosts:       # Baseline host pool (required)
 bad_actors:  # Anomalous host pool (optional)
 ```
@@ -24,10 +26,10 @@ Fleet-wide metadata. All fields are required.
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Fleet identifier. Used in output directory naming and the manifest. |
-| `duration` | int or string | Archive duration for ALL hosts. Overrides workload profile durations. Integer = seconds, or strings: `'10m'`, `'1h'`, `'24h'`, `'7d'`. |
-| `interval` | int or string | Sampling interval for ALL hosts. Overrides workload profile intervals. |
+| `duration` | int or string | Archive duration for ALL hosts. Integer = seconds, or strings: `'10m'`, `'1h'`, `'24h'`, `'7d'`. |
+| `interval` | int or string | Sampling interval for ALL hosts. |
 | `hostname_prefix` | string | Prefix for generated hostnames. Hosts are named `<prefix>-01`, `<prefix>-02`, etc. |
-| `hardware` | string | Hardware profile name (e.g. `generic-large`). Applied to ALL hosts, overriding workload profile hardware. |
+| `hardware` | string | Hardware profile name (e.g. `generic-large`). Applied to ALL hosts. |
 
 ### Example
 
@@ -44,6 +46,54 @@ This produces hostnames `web-01`, `web-02`, ..., `web-NN`.
 
 ---
 
+## profiles
+
+Named workload profile definitions. Required. Each entry defines a workload that can be
+referenced by name from `hosts.baseline` or `bad_actors.profiles`.
+
+Each profile contains a `phases` list — the same structure as the `phases` section of a
+standalone workload profile. Profiles do **not** contain `meta`, `host`, or `hardware`
+sections — those are all controlled at the fleet level.
+
+### Example
+
+```yaml
+profiles:
+  steady-baseline:
+    phases:
+      - name: normal-operations
+        duration: 24h
+        cpu:
+          utilization: 0.35
+          user_ratio: 0.65
+          sys_ratio: 0.20
+          iowait_ratio: 0.05
+        memory:
+          used_ratio: 0.55
+          cache_ratio: 0.25
+        disk:
+          read_mbps: 20.0
+          write_mbps: 10.0
+        network:
+          rx_mbps: 200.0
+          tx_mbps: 100.0
+
+  cpu-saturated:
+    phases:
+      - name: overloaded
+        duration: 24h
+        cpu:
+          utilization: 0.96
+          user_ratio: 0.85
+          sys_ratio: 0.10
+          iowait_ratio: 0.05
+        memory:
+          used_ratio: 0.70
+          cache_ratio: 0.10
+```
+
+---
+
 ## hosts
 
 Baseline host pool configuration. Required.
@@ -51,7 +101,7 @@ Baseline host pool configuration. Required.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `count` | int | — | **Required.** Total number of hosts in the fleet (includes bad actors). Must be ≥ 1. |
-| `baseline` | string | — | **Required.** Path to the baseline workload profile YAML file. Resolved relative to the fleet profile file's directory. |
+| `baseline` | string | — | **Required.** Name of a profile defined in the `profiles` section. |
 | `jitter` | float | `0.0` | Standard deviation for per-host Gaussian jitter. Applied multiplicatively to all stressor values. Typical range: 0.02–0.10. |
 
 ### Example
@@ -59,7 +109,7 @@ Baseline host pool configuration. Required.
 ```yaml
 hosts:
   count: 20
-  baseline: fleet-baseline.yaml
+  baseline: steady-baseline
   jitter: 0.05
 ```
 
@@ -73,7 +123,7 @@ Optional section defining hosts that deviate from the baseline.
 |-------|------|---------|-------------|
 | `count` | int | `0` | Number of bad-actor hosts. Must not exceed `hosts.count`. |
 | `jitter` | float | inherits `hosts.jitter` | Jitter for bad-actor hosts. |
-| `profiles` | list of strings | `[]` | Paths to workload profile YAML files for bad actors. Resolved relative to the fleet profile file. Bad actors are randomly assigned a profile from this list. |
+| `profiles` | list of strings | `[]` | Names of profiles defined in the `profiles` section. Bad actors are randomly assigned a profile from this list. |
 
 ### Example
 
@@ -82,8 +132,8 @@ bad_actors:
   count: 2
   jitter: 0.03
   profiles:
-    - fleet-bad-cpu.yaml
-    - fleet-bad-memory.yaml
+    - cpu-saturated
+    - memory-exhausted
 ```
 
 ---
@@ -99,17 +149,49 @@ meta:
   hostname_prefix: web
   hardware: generic-large
 
+profiles:
+  steady-baseline:
+    phases:
+      - name: normal-operations
+        duration: 24h
+        cpu:
+          utilization: 0.35
+          user_ratio: 0.65
+          sys_ratio: 0.20
+          iowait_ratio: 0.05
+        memory:
+          used_ratio: 0.55
+          cache_ratio: 0.25
+        disk:
+          read_mbps: 20.0
+          write_mbps: 10.0
+        network:
+          rx_mbps: 200.0
+          tx_mbps: 100.0
+
+  cpu-saturated:
+    phases:
+      - name: overloaded
+        duration: 24h
+        cpu:
+          utilization: 0.96
+          user_ratio: 0.85
+          sys_ratio: 0.10
+          iowait_ratio: 0.05
+        memory:
+          used_ratio: 0.70
+          cache_ratio: 0.10
+
 hosts:
   count: 20
-  baseline: fleet-baseline.yaml
+  baseline: steady-baseline
   jitter: 0.05
 
 bad_actors:
   count: 2
   jitter: 0.03
   profiles:
-    - fleet-bad-cpu.yaml
-    - fleet-bad-memory.yaml
+    - cpu-saturated
 ```
 
 This generates 20 archives:
@@ -133,29 +215,15 @@ All hosts share the `generic-large` hardware profile, a 24h duration, and 60s in
 
 ---
 
-## How Fleet Overrides Work
-
-The fleet profile overrides several settings from individual workload profiles:
-
-| Fleet setting | Overrides workload field | Notes |
-|---------------|--------------------------|-------|
-| `meta.duration` | `meta.duration` in workload | All hosts get the same duration |
-| `meta.interval` | `meta.interval` in workload | All hosts get the same interval |
-| `meta.hardware` | `host.profile` in workload | All hosts get the same hardware |
-| `meta.hostname_prefix` + index | `meta.hostname` in workload | Each host gets a unique name |
-
-Warnings are emitted when the fleet overrides differ from the workload profile values.
-
----
-
 ## Validation Rules
 
 - `meta` must include all five fields: `name`, `duration`, `interval`, `hostname_prefix`, `hardware`
+- `profiles` must be a non-empty mapping of named profile definitions
+- Each profile must contain a non-empty `phases` list
 - `hosts.count` must be a positive integer
-- `hosts.baseline` must be a valid path to a workload profile
+- `hosts.baseline` must be a name defined in the `profiles` section
 - `bad_actors.count` must not exceed `hosts.count`
-- `bad_actors.profiles` must be a non-empty list when `bad_actors.count > 0`
-- All referenced workload profiles must be valid pmlogsynth workload profiles
+- `bad_actors.profiles` entries must be names defined in the `profiles` section
 - `hardware` must be a valid hardware profile name
 
 ---
@@ -177,7 +245,7 @@ Warnings are emitted when the fleet overrides differ from the workload profile v
 ## CLI Commands
 
 ```bash
-# Validate the fleet profile (and referenced workload profiles)
+# Validate the fleet profile
 pmlogsynth fleet --validate fleet-profile.yaml
 
 # Preview host assignments without generating archives
@@ -188,7 +256,4 @@ pmlogsynth fleet -o ./generated-archives/my-fleet fleet-profile.yaml
 
 # Reproducible generation (same seed = same host assignment + jitter)
 pmlogsynth fleet --seed 42 -o ./generated-archives/my-fleet fleet-profile.yaml
-
-# Parallel generation (use multiple workers)
-pmlogsynth fleet --jobs 4 -o ./generated-archives/my-fleet fleet-profile.yaml
 ```

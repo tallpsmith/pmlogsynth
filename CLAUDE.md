@@ -26,6 +26,8 @@ pmlogsynth/                 # installable Python package
 ├── timeline.py             # phase sequencer, linear interpolation, repeat expansion
 ├── sampler.py              # ValueSampler: noise, counter accumulation
 ├── writer.py               # pcp.pmi.pmiLogImport wrapper (isolated PCP dependency)
+├── fleet.py                # fleet profile loader, host assignment, orchestrator, manifest
+├── jitter.py               # per-host stressor jitter (pure functions, no mutation)
 ├── profiles/               # bundled hardware profile YAML files (7 profiles)
 └── domains/
     ├── base.py             # MetricModel abstract base
@@ -65,6 +67,10 @@ pmlogsynth --validate profile.yaml
 pmlogsynth -o ./out profile.yaml
 pmlogsynth --list-profiles
 pmlogsynth --list-metrics
+
+# Fleet mode
+pmlogsynth fleet fleet-profile.yml --dry-run
+pmlogsynth fleet fleet-profile.yml -o ./generated-archives/my-fleet
 ```
 
 ## Key Invariants
@@ -77,7 +83,7 @@ pmlogsynth --list-metrics
   NOT `ProfileLoader`. Parsed stressor fields are `Optional` — `None` ≠ default value.
 - **Counter increments clamped ≥ 0**: noise must never produce negative counter deltas
 - **`ProfileLoader.from_file` delegates to `from_string`**: always
-- **CLI uses argparse subparsers**: `fleet` is reserved; do not use as positional arg handling
+- **CLI uses argparse subparsers**: `fleet` and `generate` are implemented subcommands
 
 ## Code Style
 

@@ -1,0 +1,26 @@
+meta:
+  hostname: baseline-host
+  duration: 600
+  interval: 60
+
+host:
+  profile: generic-small
+
+phases:
+  - name: steady
+    duration: 600
+    cpu:
+      utilization: 0.50
+      user_ratio: 0.70
+      sys_ratio: 0.20
+      iowait_ratio: 0.10
+    memory:
+      used_ratio: 0.40
+      cache_ratio: 0.20
+    disk:
+      read_mbps: 10.0
+      write_mbps: 5.0
+    network:
+      rx_mbps: 100.0
+      tx_mbps: 50.0
+      error_rate: 0.001

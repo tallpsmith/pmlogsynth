@@ -61,13 +61,38 @@ def test_parse_start_invalid_raises() -> None:
 
 
 def test_fleet_subcommand_exits_2(capsys: pytest.CaptureFixture) -> None:
-    """fleet subcommand prints 'not yet implemented' and exits 2."""
+    """fleet subcommand without FLEET_PROFILE arg exits non-zero."""
     with patch("sys.argv", ["pmlogsynth", "fleet"]):
         with pytest.raises(SystemExit) as exc_info:
             main()
-    assert exc_info.value.code == 2
+        assert exc_info.value.code != 0
+
+
+def test_fleet_validate_exits_0_on_valid_profile(tmp_path: Path) -> None:
+    """fleet --validate should exit 0 for a valid fleet profile."""
+    fleet_fixtures = Path(__file__).parent.parent / "fixtures" / "fleet"
+    with patch("sys.argv", [
+        "pmlogsynth", "fleet", "--validate",
+        str(fleet_fixtures / "test-fleet.yaml"),
+    ]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+
+
+def test_fleet_dry_run_exits_0(capsys: pytest.CaptureFixture) -> None:
+    """fleet --dry-run should print assignments and exit 0."""
+    fleet_fixtures = Path(__file__).parent.parent / "fixtures" / "fleet"
+    with patch("sys.argv", [
+        "pmlogsynth", "fleet", "--dry-run", "--seed", "42",
+        str(fleet_fixtures / "test-fleet.yaml"),
+    ]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "fleet" in captured.err.lower() or "not yet implemented" in captured.err.lower()
+    assert "test-fleet" in captured.out
+    assert "host-01" in captured.out
 
 
 def test_list_metrics_flag_exits_zero() -> None:

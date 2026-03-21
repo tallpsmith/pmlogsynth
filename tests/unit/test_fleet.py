@@ -7,6 +7,23 @@ import pytest
 FLEET_FIXTURES = Path(__file__).parent.parent / "fixtures" / "fleet"
 
 
+class TestInlineProfile:
+    """Tests for the InlineProfile dataclass."""
+
+    def test_inline_profile_holds_phases_raw(self) -> None:
+        from pmlogsynth.fleet.models import InlineProfile
+
+        phases = [{"name": "steady", "duration": 600, "cpu": {"utilization": 0.5}}]
+        profile = InlineProfile(phases=phases)
+        assert profile.phases == phases
+
+    def test_inline_profile_default_empty_phases(self) -> None:
+        from pmlogsynth.fleet.models import InlineProfile
+
+        profile = InlineProfile(phases=[])
+        assert profile.phases == []
+
+
 class TestLoadFleetProfile:
     """Tests for load_fleet_profile YAML parsing."""
 

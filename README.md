@@ -191,7 +191,8 @@ for example, a simulated spike that started an hour ago.  Positive offsets
 
 ### Fleet Mode
 
-Generate a fleet of PCP archives — one per host — from a single fleet profile.
+Generate a fleet of PCP archives — one per host — from a single self-contained
+fleet profile. All workload definitions are inline — no external files needed.
 Each host gets per-host stressor jitter for realistic variation across the fleet.
 
 ```bash

@@ -283,9 +283,11 @@ pmlogsynth -o ./generated-archives/complete-example docs/complete-example.yml
 
 ## Fleet Profile Format
 
-A fleet profile is a separate YAML document used with the `pmlogsynth fleet`
-subcommand. It describes a fleet of hosts that share a common hardware profile,
-each generating its own PCP archive with per-host stressor variation (jitter).
+A fleet profile is a single self-contained YAML document used with the
+`pmlogsynth fleet` subcommand. It describes a fleet of hosts that share a
+common hardware profile, each generating its own PCP archive with per-host
+stressor variation (jitter). All workload definitions are inline — no external
+files are needed.
 
 Fleet profiles are **not** interchangeable with workload profiles — they have a
 different schema and are passed to the `fleet` subcommand, not the default
@@ -298,10 +300,19 @@ Fleet-wide settings. All fields are required.
 | Field | Type | Constraints |
 |-------|------|-------------|
 | `name` | string | Fleet identifier; used in manifest and default output directory |
-| `duration` | int or string | Positive; overrides duration in all workload profiles. Accepts `30s`, `10m`, `24h`, `1d`, `1h30m`. |
-| `interval` | int or string | Positive; overrides interval in all workload profiles. Same format as duration. |
+| `duration` | int or string | Positive; applied to all hosts. Accepts `30s`, `10m`, `24h`, `1d`, `1h30m`. |
+| `interval` | int or string | Positive; applied to all hosts. Same format as duration. |
 | `hostname_prefix` | string | Prefix for generated hostnames (e.g. `prod-web` → `prod-web-01`, `prod-web-02`, ...) |
-| `hardware` | string | Named hardware profile; overrides `host.profile` in all workload profiles |
+| `hardware` | string | Named hardware profile; applied to all hosts |
+
+### `profiles`
+
+Named workload profile definitions. Required. Each entry defines a workload
+that can be referenced by name from `hosts.baseline` or `bad_actors.profiles`.
+
+Each profile contains a `phases` list — the same structure as the `phases`
+section of a standalone workload profile. Profiles do **not** contain `meta`,
+`host`, or `hardware` sections — those are all controlled at the fleet level.
 
 ### `hosts`
 
@@ -310,7 +321,7 @@ Baseline host pool configuration.
 | Field | Type | Default | Constraints |
 |-------|------|---------|-------------|
 | `count` | integer | required | Positive; total number of hosts in the fleet |
-| `baseline` | string (path) | required | Path to the baseline workload profile YAML, resolved relative to the fleet profile file |
+| `baseline` | string | required | Name of a profile defined in the `profiles` section |
 | `jitter` | float | `0.0` | Standard deviation of the Gaussian jitter factor (mean 1.0). Higher values produce more variation between hosts. |
 
 ### `bad_actors`
@@ -322,21 +333,7 @@ workload profiles (e.g. high-CPU or memory-pressure scenarios).
 |-------|------|---------|-------------|
 | `count` | integer | `0` | Must not exceed `hosts.count` |
 | `jitter` | float | inherits `hosts.jitter` | Per-bad-actor jitter standard deviation |
-| `profiles` | list of strings (paths) | `[]` | Paths to bad-actor workload profiles, resolved relative to the fleet profile file. One is chosen at random per bad-actor host. |
-
-### Path resolution
-
-All workload profile paths (`hosts.baseline` and `bad_actors.profiles` entries)
-are resolved **relative to the directory containing the fleet profile file**.
-This allows fleet profiles and their workload profiles to live together in a
-self-contained directory.
-
-### Fleet-level overrides
-
-The fleet `meta.duration`, `meta.interval`, and `meta.hardware` values
-**override** the corresponding values in each workload profile. If the workload
-profile specifies different values, a warning is emitted to stderr but
-generation proceeds with the fleet-level settings.
+| `profiles` | list of strings | `[]` | Names of profiles defined in the `profiles` section. One is chosen at random per bad-actor host. |
 
 ### Jitter semantics
 
@@ -362,17 +359,41 @@ meta:
   hostname_prefix: prod-web
   hardware: generic-large
 
+profiles:
+  steady-baseline:
+    phases:
+      - name: normal
+        duration: 1h
+        cpu:
+          utilization: 0.35
+          user_ratio: 0.65
+          sys_ratio: 0.20
+        memory:
+          used_ratio: 0.55
+          cache_ratio: 0.25
+
+  cpu-spike:
+    phases:
+      - name: overloaded
+        duration: 1h
+        cpu:
+          utilization: 0.96
+          user_ratio: 0.85
+          sys_ratio: 0.10
+        memory:
+          used_ratio: 0.70
+          cache_ratio: 0.10
+
 hosts:
   count: 20
-  baseline: workloads/baseline.yml
+  baseline: steady-baseline
   jitter: 0.10
 
 bad_actors:
   count: 3
   jitter: 0.15
   profiles:
-    - workloads/cpu-spike.yml
-    - workloads/memory-pressure.yml
+    - cpu-spike
 ```
 
 ### Output

@@ -470,17 +470,19 @@ A
 YAML file is written alongside the archives recording all host assignments.
 .PP
 Fleet profiles are distinct from workload profiles.
-A fleet profile specifies a set of hosts sharing a common hardware profile,
-a baseline workload, and optional bad-actor hosts with different workload
-profiles.
-Workload profile paths are resolved relative to the fleet profile file.
+A fleet profile is a single self-contained YAML file that defines a set of
+hosts sharing a common hardware profile, with named workload profiles defined
+inline in a
+.B profiles
+section.
+Baseline and bad-actor hosts reference these named profiles by name.
 .PP
 Fleet-level
 .BR meta.duration ,
 .BR meta.interval ,
 and
 .B meta.hardware
-override the corresponding values in individual workload profiles.
+are applied to all hosts.
 .SS Fleet Options
 .TP
 \fIFLEET_PROFILE\fR
@@ -519,7 +521,7 @@ Print per-host generation progress to stderr.
 .BI \-C " DIR" ", \-\-config\-dir " DIR
 Additional hardware profile directory (highest precedence).
 .SS Fleet Profile Format
-A fleet profile YAML file has three top-level sections:
+A fleet profile YAML file has four top-level sections:
 .TP
 .B meta
 Fleet-wide settings:
@@ -529,17 +531,24 @@ Fleet-wide settings:
 .BR hostname_prefix " (string, required),"
 .BR hardware " (named hardware profile, required)."
 .TP
+.B profiles
+Named workload profile definitions. Each entry contains a
+.B phases
+list (same structure as standalone workload profiles). Profiles do not contain
+.BR meta ", " host ", or " hardware
+sections \(em those are controlled at the fleet level.
+.TP
 .B hosts
 Baseline host pool:
 .BR count " (integer, required),"
-.BR baseline " (path to workload profile, required),"
+.BR baseline " (name of a profile in the profiles section, required),"
 .BR jitter " (float, default 0.0 \(em Gaussian noise standard deviation)."
 .TP
 .B bad_actors
 Optional bad-actor host pool:
 .BR count " (integer, default 0 \(em must not exceed hosts.count),"
 .BR jitter " (float, inherits hosts.jitter if absent),"
-.BR profiles " (list of paths to workload profiles)."
+.BR profiles " (list of names from the profiles section)."
 .SH EXAMPLES
 .SS Generate a 10-minute archive with a CPU spike
 .nf

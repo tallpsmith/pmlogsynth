@@ -356,22 +356,11 @@ class TestWriteManifest:
 
 
 class TestOverrideWarnings:
-    """Tests for warnings when fleet settings override workload profile values."""
+    """Override warnings are no longer applicable with inline profiles."""
 
-    def test_warns_on_duration_conflict(self, caplog: pytest.LogCaptureFixture) -> None:
-        import logging
-
-        from pmlogsynth.fleet import check_override_warnings, load_fleet_profile
-
-        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
-        from dataclasses import replace
-
-        fleet_different = replace(fleet, meta=replace(fleet.meta, duration=3600))
-        with caplog.at_level(logging.WARNING):
-            check_override_warnings(fleet_different)
-        assert any("duration" in r.message for r in caplog.records)
-
-    def test_no_warning_when_values_match(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_check_override_warnings_is_noop(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
         import logging
 
         from pmlogsynth.fleet import check_override_warnings, load_fleet_profile
@@ -379,7 +368,7 @@ class TestOverrideWarnings:
         fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
         with caplog.at_level(logging.WARNING):
             check_override_warnings(fleet)
-        assert not any("duration" in r.message for r in caplog.records)
+        assert len(caplog.records) == 0
 
 
 class TestDryRun:

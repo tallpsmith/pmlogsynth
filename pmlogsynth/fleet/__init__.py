@@ -17,6 +17,7 @@ from pmlogsynth.fleet.models import (
     FleetProfile,
     HostAssignment,
     HostsConfig,
+    InlineProfile,
 )
 from pmlogsynth.fleet.orchestrator import generate_fleet
 from pmlogsynth.fleet.warnings import check_override_warnings
@@ -30,6 +31,7 @@ __all__ = [
     "generate_fleet",
     "HostAssignment",
     "HostsConfig",
+    "InlineProfile",
     "load_fleet_profile",
     "print_dry_run",
     "write_manifest",

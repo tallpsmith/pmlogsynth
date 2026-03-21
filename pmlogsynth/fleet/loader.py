@@ -10,6 +10,7 @@ from pmlogsynth.fleet.models import (
     FleetMeta,
     FleetProfile,
     HostsConfig,
+    InlineProfile,
 )
 from pmlogsynth.profile import ValidationError, parse_duration
 
@@ -51,7 +52,32 @@ def _parse_fleet_meta(raw: Dict[str, Any]) -> FleetMeta:
     )
 
 
-def _parse_hosts(raw: Dict[str, Any], fleet_dir: Path) -> HostsConfig:
+def _parse_profiles(raw: Dict[str, Any]) -> Dict[str, InlineProfile]:
+    """Parse and validate the profiles section of a fleet profile."""
+    section = raw.get("profiles")
+    if not isinstance(section, dict):
+        raise ValidationError("fleet profile missing 'profiles' section")
+
+    profiles = {}  # type: Dict[str, InlineProfile]
+    for name, body in section.items():
+        if not isinstance(body, dict):
+            raise ValidationError(
+                "profile '{}' must be a mapping".format(name)
+            )
+        phases = body.get("phases")
+        if not isinstance(phases, list) or len(phases) == 0:
+            raise ValidationError(
+                "profile '{}' phases must be a non-empty list".format(name)
+            )
+        profiles[str(name)] = InlineProfile(phases=phases)
+
+    return profiles
+
+
+def _parse_hosts(
+    raw: Dict[str, Any],
+    profiles: Dict[str, InlineProfile],
+) -> HostsConfig:
     """Parse and validate the hosts section of a fleet profile."""
     hosts = raw.get("hosts")
     if not isinstance(hosts, dict):
@@ -64,14 +90,18 @@ def _parse_hosts(raw: Dict[str, Any], fleet_dir: Path) -> HostsConfig:
     baseline = hosts.get("baseline")
     if not baseline:
         raise ValidationError("hosts.baseline is required")
+    baseline = str(baseline)
+
+    if baseline not in profiles:
+        raise ValidationError(
+            "hosts.baseline '{}' not found in profiles".format(baseline)
+        )
 
     jitter = float(hosts.get("jitter", 0.0))
-    baseline_path = fleet_dir / str(baseline)
 
     return HostsConfig(
         count=count,
-        baseline=str(baseline),
-        baseline_path=baseline_path,
+        baseline=baseline,
         jitter=jitter,
     )
 
@@ -79,7 +109,7 @@ def _parse_hosts(raw: Dict[str, Any], fleet_dir: Path) -> HostsConfig:
 def _parse_bad_actors(
     raw: Dict[str, Any],
     hosts_config: HostsConfig,
-    fleet_dir: Path,
+    profiles: Dict[str, InlineProfile],
 ) -> BadActorsConfig:
     """Parse and validate the bad_actors section of a fleet profile."""
     section = raw.get("bad_actors")
@@ -105,32 +135,38 @@ def _parse_bad_actors(
         jitter = hosts_config.jitter
 
     profiles_raw = section.get("profiles", [])
-    profiles = [str(p) for p in profiles_raw]
-    profile_paths = [fleet_dir / p for p in profiles]
+    profile_names = [str(p) for p in profiles_raw]
+
+    for name in profile_names:
+        if name not in profiles:
+            raise ValidationError(
+                "bad_actors profile '{}' not found in profiles".format(name)
+            )
 
     return BadActorsConfig(
         count=count,
         jitter=jitter,
-        profiles=profiles,
-        profile_paths=profile_paths,
+        profiles=profile_names,
     )
 
 
 def load_fleet_profile(path: Path) -> FleetProfile:
     """Load and validate a fleet profile YAML file.
 
-    Workload paths (baseline, bad-actor profiles) are resolved relative
-    to the directory containing the fleet YAML file.
+    All workload profiles are defined inline in the 'profiles' section.
+    References in hosts.baseline and bad_actors.profiles are validated
+    against profile names.
     """
     text = path.read_text()
     raw = yaml.safe_load(text)
     if not isinstance(raw, dict):
         raise ValidationError("fleet profile must be a YAML mapping")
 
-    fleet_dir = path.parent
-
     meta = _parse_fleet_meta(raw)
-    hosts = _parse_hosts(raw, fleet_dir)
-    bad_actors = _parse_bad_actors(raw, hosts, fleet_dir)
+    profiles = _parse_profiles(raw)
+    hosts = _parse_hosts(raw, profiles)
+    bad_actors = _parse_bad_actors(raw, hosts, profiles)
 
-    return FleetProfile(meta=meta, hosts=hosts, bad_actors=bad_actors)
+    return FleetProfile(
+        meta=meta, hosts=hosts, bad_actors=bad_actors, profiles=profiles,
+    )

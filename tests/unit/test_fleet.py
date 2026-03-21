@@ -37,10 +37,61 @@ class TestLoadFleetProfile:
         assert fleet.meta.hostname_prefix == "host"
         assert fleet.meta.hardware == "generic-small"
         assert fleet.hosts.count == 5
+        assert fleet.hosts.baseline == "baseline"
         assert fleet.hosts.jitter == 0.05
         assert fleet.bad_actors.count == 1
         assert fleet.bad_actors.jitter == 0.15
         assert len(fleet.bad_actors.profiles) == 1
+        assert "baseline" in fleet.profiles
+        assert "bad-cpu" in fleet.profiles
+
+    def test_profiles_contain_phases(self) -> None:
+        from pmlogsynth.fleet import load_fleet_profile
+
+        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
+        assert len(fleet.profiles["baseline"].phases) == 1
+        assert fleet.profiles["baseline"].phases[0]["name"] == "steady"
+        assert len(fleet.profiles["bad-cpu"].phases) == 1
+        assert fleet.profiles["bad-cpu"].phases[0]["name"] == "saturated"
+
+    def test_missing_profiles_section_raises(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import load_fleet_profile
+        from pmlogsynth.profile import ValidationError
+
+        (tmp_path / "bad.yaml").write_text(
+            "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
+            "  hostname_prefix: x\n  hardware: generic-small\n"
+            "hosts:\n  count: 1\n  baseline: foo\n"
+        )
+        with pytest.raises(ValidationError, match="profiles"):
+            load_fleet_profile(tmp_path / "bad.yaml")
+
+    def test_baseline_references_missing_profile_raises(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import load_fleet_profile
+        from pmlogsynth.profile import ValidationError
+
+        (tmp_path / "bad.yaml").write_text(
+            "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
+            "  hostname_prefix: x\n  hardware: generic-small\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 1\n  baseline: bar\n"
+        )
+        with pytest.raises(ValidationError, match="bar.*not found in profiles"):
+            load_fleet_profile(tmp_path / "bad.yaml")
+
+    def test_bad_actor_references_missing_profile_raises(self, tmp_path: Path) -> None:
+        from pmlogsynth.fleet import load_fleet_profile
+        from pmlogsynth.profile import ValidationError
+
+        (tmp_path / "bad.yaml").write_text(
+            "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
+            "  hostname_prefix: x\n  hardware: generic-small\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 2\n  baseline: foo\n"
+            "bad_actors:\n  count: 1\n  profiles:\n    - missing\n"
+        )
+        with pytest.raises(ValidationError, match="missing.*not found in profiles"):
+            load_fleet_profile(tmp_path / "bad.yaml")
 
     def test_missing_meta_name_raises(self, tmp_path: Path) -> None:
         from pmlogsynth.fleet import load_fleet_profile
@@ -49,7 +100,8 @@ class TestLoadFleetProfile:
         (tmp_path / "bad.yaml").write_text(
             "meta:\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
-            "hosts:\n  count: 1\n  baseline: x.yaml\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 1\n  baseline: foo\n"
         )
         with pytest.raises(ValidationError, match="meta.name"):
             load_fleet_profile(tmp_path / "bad.yaml")
@@ -61,6 +113,7 @@ class TestLoadFleetProfile:
         (tmp_path / "bad.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
         )
         with pytest.raises(ValidationError, match="hosts"):
             load_fleet_profile(tmp_path / "bad.yaml")
@@ -72,8 +125,9 @@ class TestLoadFleetProfile:
         (tmp_path / "bad.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
-            "hosts:\n  count: 2\n  baseline: x.yaml\n"
-            "bad_actors:\n  count: 3\n  profiles:\n    - y.yaml\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 2\n  baseline: foo\n"
+            "bad_actors:\n  count: 3\n  profiles:\n    - foo\n"
         )
         with pytest.raises(ValidationError, match="bad_actors.count"):
             load_fleet_profile(tmp_path / "bad.yaml")
@@ -84,8 +138,9 @@ class TestLoadFleetProfile:
         (tmp_path / "f.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
-            "hosts:\n  count: 3\n  baseline: x.yaml\n  jitter: 0.08\n"
-            "bad_actors:\n  count: 1\n  profiles:\n    - y.yaml\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 3\n  baseline: foo\n  jitter: 0.08\n"
+            "bad_actors:\n  count: 1\n  profiles:\n    - foo\n"
         )
         fleet = load_fleet_profile(tmp_path / "f.yaml")
         assert fleet.bad_actors.jitter == 0.08
@@ -96,7 +151,8 @@ class TestLoadFleetProfile:
         (tmp_path / "f.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
-            "hosts:\n  count: 3\n  baseline: x.yaml\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 3\n  baseline: foo\n"
         )
         fleet = load_fleet_profile(tmp_path / "f.yaml")
         assert fleet.bad_actors.count == 0
@@ -108,18 +164,25 @@ class TestLoadFleetProfile:
         (tmp_path / "f.yaml").write_text(
             "meta:\n  name: x\n  duration: 24h\n  interval: 15s\n"
             "  hostname_prefix: x\n  hardware: generic-small\n"
-            "hosts:\n  count: 1\n  baseline: x.yaml\n"
+            "profiles:\n  foo:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 1\n  baseline: foo\n"
         )
         fleet = load_fleet_profile(tmp_path / "f.yaml")
         assert fleet.meta.duration == 86400
         assert fleet.meta.interval == 15
 
-    def test_workload_paths_resolved_relative_to_fleet_file(self) -> None:
+    def test_profile_with_empty_phases_raises(self, tmp_path: Path) -> None:
         from pmlogsynth.fleet import load_fleet_profile
+        from pmlogsynth.profile import ValidationError
 
-        fleet = load_fleet_profile(FLEET_FIXTURES / "test-fleet.yaml")
-        assert fleet.hosts.baseline_path.exists()
-        assert fleet.hosts.baseline_path.name == "baseline.yaml"
+        (tmp_path / "bad.yaml").write_text(
+            "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
+            "  hostname_prefix: x\n  hardware: generic-small\n"
+            "profiles:\n  foo:\n    phases: []\n"
+            "hosts:\n  count: 1\n  baseline: foo\n"
+        )
+        with pytest.raises(ValidationError, match="phases.*non-empty"):
+            load_fleet_profile(tmp_path / "bad.yaml")
 
 
 class TestAssignHosts:

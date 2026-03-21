@@ -1,7 +1,11 @@
 # Fleet Mode — Design Specification
 
 **Date:** 2026-03-20
-**Status:** Approved
+**Status:** Superseded by `2026-03-21-single-file-fleet-profiles-design.md`
+
+> **Note:** The multi-file fleet format described here has been replaced by a
+> single self-contained YAML format with inline named workload profiles.
+> See `2026-03-21-single-file-fleet-profiles-design.md` for the current design.
 
 ---
 

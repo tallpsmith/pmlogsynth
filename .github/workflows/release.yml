@@ -1,0 +1,59 @@
+name: Release to PyPI
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate:
+    name: "Validate tag matches package version"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install tools
+        run: python3 -m pip install hatch packaging --break-system-packages
+
+      - name: Validate version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Strip leading 'v' prefix (hatch-vcs default tag pattern is v*)
+          TAG_VERSION="${TAG#v}"
+          # Normalize through PEP 440
+          TAG_NORMALIZED=$(python3 -c "from packaging.version import Version; print(Version('${TAG_VERSION}'))")
+          # Get version from hatch (reads hatch-vcs config)
+          HATCH_VERSION=$(hatch version)
+          echo "Tag version (normalized): ${TAG_NORMALIZED}"
+          echo "Hatch version: ${HATCH_VERSION}"
+          if [ "${TAG_NORMALIZED}" != "${HATCH_VERSION}" ]; then
+            echo "::error::Version mismatch! Tag=${TAG_NORMALIZED}, Hatch=${HATCH_VERSION}"
+            exit 1
+          fi
+          echo "Versions match."
+
+  pypi:
+    name: "Build and publish to PyPI"
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install build tools
+        run: python3 -m pip install build --break-system-packages
+
+      - name: Build sdist and wheel
+        run: python3 -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

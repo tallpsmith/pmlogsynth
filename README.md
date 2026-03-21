@@ -23,13 +23,13 @@ writing.  All tests (unit, integration, and E2E) need PCP's Python bindings avai
 **Linux (Debian/Ubuntu)**:
 ```bash
 sudo apt-get install pcp python3-pcp
-pip install pmlogsynth
+pip install pcp-pmlogsynth
 ```
 
 **Linux (RHEL/Fedora)**:
 ```bash
 sudo dnf install pcp python3-pcp
-pip install pmlogsynth
+pip install pcp-pmlogsynth
 ```
 
 **macOS** (Homebrew): PCP compiles its Python bindings against Homebrew's Python.

@@ -258,7 +258,8 @@ class TestAssignHosts:
         (tmp_path / "f.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: srv\n  hardware: generic-small\n"
-            "hosts:\n  count: 3\n  baseline: x.yaml\n"
+            "profiles:\n  base:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 3\n  baseline: base\n"
         )
         fleet = load_fleet_profile(tmp_path / "f.yaml")
         assignments = assign_hosts(fleet, seed=1)
@@ -277,7 +278,8 @@ class TestAssignHosts:
         (tmp_path / "f.yaml").write_text(
             "meta:\n  name: x\n  duration: 600\n  interval: 60\n"
             "  hostname_prefix: srv\n  hardware: generic-small\n"
-            "hosts:\n  count: 100\n  baseline: x.yaml\n"
+            "profiles:\n  base:\n    phases:\n      - name: a\n        duration: 60\n"
+            "hosts:\n  count: 100\n  baseline: base\n"
         )
         fleet = load_fleet_profile(tmp_path / "f.yaml")
         assignments = assign_hosts(fleet, seed=1)
@@ -291,7 +293,7 @@ class TestAssignHosts:
         assignments = assign_hosts(fleet, seed=42)
         bad = [a for a in assignments if a.role == "bad_actor"]
         for b in bad:
-            assert b.workload_path.name in ("bad-cpu.yaml",)
+            assert b.workload_rel in ("bad-cpu",)
 
 
 class TestWriteManifest:

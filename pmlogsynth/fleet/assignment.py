@@ -38,7 +38,7 @@ def assign_hosts(
     # Pick which host indices are bad actors
     bad_actor_indices = set(rng.sample(range(count), fleet.bad_actors.count))
 
-    assignments: List[HostAssignment] = []
+    assignments = []  # type: List[HostAssignment]
     for i in range(count):
         hostname = "{}-{}".format(
             fleet.meta.hostname_prefix,
@@ -51,12 +51,10 @@ def assign_hosts(
             jitter_stddev = fleet.bad_actors.jitter
             # Pick a profile from the bad-actor pool
             profile_idx = rng.randrange(len(fleet.bad_actors.profiles))
-            workload_path = fleet.bad_actors.profile_paths[profile_idx]
             workload_rel = fleet.bad_actors.profiles[profile_idx]
         else:
             role = "baseline"
             jitter_stddev = fleet.hosts.jitter
-            workload_path = fleet.hosts.baseline_path
             workload_rel = fleet.hosts.baseline
 
         # Generate a stable, deterministic jitter factor per host
@@ -69,7 +67,6 @@ def assign_hosts(
                 hostname=hostname,
                 role=role,
                 jitter_factor=jitter_factor,
-                workload_path=workload_path,
                 workload_rel=workload_rel,
             )
         )

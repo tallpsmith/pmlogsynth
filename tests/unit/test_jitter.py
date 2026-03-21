@@ -10,7 +10,7 @@ def baseline_profile() -> WorkloadProfile:
     """Load the fleet baseline workload profile."""
     from pathlib import Path
 
-    fixture = Path(__file__).parent.parent / "fixtures" / "fleet" / "baseline.yaml"
+    fixture = Path(__file__).parent.parent / "fixtures" / "jitter-baseline.yaml"
     return WorkloadProfile.from_file(fixture)
 
 

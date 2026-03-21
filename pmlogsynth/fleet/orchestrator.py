@@ -4,7 +4,7 @@ import importlib
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import yaml
 
@@ -33,7 +33,7 @@ def _build_workload_yaml(
             "profile": fleet.meta.hardware,
         },
         "phases": inline.phases,
-    }  # type: Dict[str, Any]
+    }
 
     return yaml.dump(workload, default_flow_style=False, sort_keys=False)
 

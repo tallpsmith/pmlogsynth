@@ -4,11 +4,38 @@ import importlib
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 from pmlogsynth.fleet.manifest import write_manifest
 from pmlogsynth.fleet.models import FleetProfile, HostAssignment
-from pmlogsynth.fleet.warnings import check_override_warnings
+
+
+def _build_workload_yaml(
+    fleet: FleetProfile,
+    assignment: HostAssignment,
+) -> str:
+    """Build a standalone workload profile YAML string from inline data.
+
+    Constructs a complete workload profile dict with fleet-level meta
+    overrides, then serialises to YAML for WorkloadProfile.from_string().
+    """
+    inline = fleet.profiles[assignment.workload_rel]
+
+    workload = {
+        "meta": {
+            "hostname": assignment.hostname,
+            "duration": fleet.meta.duration,
+            "interval": fleet.meta.interval,
+        },
+        "host": {
+            "profile": fleet.meta.hardware,
+        },
+        "phases": inline.phases,
+    }  # type: Dict[str, Any]
+
+    return yaml.dump(workload, default_flow_style=False, sort_keys=False)
 
 
 def generate_fleet(
@@ -30,8 +57,6 @@ def generate_fleet(
     _writer_mod = importlib.import_module("pmlogsynth.writer")
     ArchiveWriter = _writer_mod.ArchiveWriter
 
-    from dataclasses import replace
-
     from pmlogsynth.jitter import apply_jitter
     from pmlogsynth.profile import ProfileResolver, WorkloadProfile
     from pmlogsynth.sampler import ValueSampler
@@ -41,23 +66,12 @@ def generate_fleet(
     resolver = ProfileResolver(config_dir=config_dir)
     hardware = resolver.resolve(fleet.meta.hardware)
 
-    # Check for override warnings (once, before generation loop)
-    check_override_warnings(fleet)
-
     def _generate_one(assignment: HostAssignment) -> None:
         """Generate a single host archive."""
-        profile_text = assignment.workload_path.read_text(encoding="utf-8")
+        workload_yaml = _build_workload_yaml(fleet, assignment)
         profile = WorkloadProfile.from_string(
-            profile_text, config_dir=config_dir,
+            workload_yaml, config_dir=config_dir,
         )
-
-        overridden_meta = replace(
-            profile.meta,
-            hostname=assignment.hostname,
-            duration=fleet.meta.duration,
-            interval=fleet.meta.interval,
-        )
-        profile = replace(profile, meta=overridden_meta, hardware=hardware)
 
         profile = apply_jitter(profile, assignment.jitter_factor)
 
@@ -81,7 +95,9 @@ def generate_fleet(
                 file=sys.stderr,
             )
 
-    # Generate archives — ThreadPoolExecutor for --jobs>1.
+    # Generate archives — sequential by default.
+    # NOTE: PCP's pmiLogImport C library is not thread-safe.
+    # See https://github.com/tallpsmith/pmlogsynth/issues/16
     if jobs <= 1:
         for assignment in assignments:
             _generate_one(assignment)
